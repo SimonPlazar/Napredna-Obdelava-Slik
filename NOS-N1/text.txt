@@ -1,0 +1,10 @@
+anti aliasing ko rišemo like da so ostri robovi
+
+
+resNet block avtomatsko preko shape slike
+gpt naredi narobe
+
+resnet block se na koncu en conv
+
+
+resnet pazi na dimenzije pri resiual
