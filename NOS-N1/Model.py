@@ -100,43 +100,84 @@ class EdgePreservingDenoiser(nn.Module):
 
 
 # Dataset
-
 from torch.utils.data import Dataset
-from Generator import generate_image, noise_add
+import torch
 import numpy as np
+from Generator import generate_image, noise_add
 
 
 class SyntheticNoiseDataset(Dataset):
-    def __init__(self, clean_images=None, noisy_images=None, num_samples=1000, noise_fn=noise_add,
-                 noise_range=(0.1, 0.3)):
-        """
-        Args:
-            clean_images: Torch tensor s clean slikami (CHW format) ali None
-            noisy_images: Torch tensor z noisy slikami (CHW format) ali None
-            num_samples: Število slik za generiranje (če tensors niso podani)
-            noise_fn: Funkcija za šum
-            noise_range: Obseg šuma
-        """
+    """
+    In-memory dataset optimized for fast DataLoader batching.
+    - If `clean_images`/`noisy_images` are provided they can be:
+        * stacked torch.Tensor shape [N, C, H, W]
+        * numpy array shape [N, C, H, W] or [N, H, W, C]
+        * iterable of per-sample arrays/tensors
+    - Generated samples are stacked once and normalized to 0..1.
+    """
+
+    def __init__(self, clean_images=None, noisy_images=None,
+                 num_samples=1000, noise_fn=noise_add, noise_range=(0.1, 0.3),
+                 normalize=True, max_value=255.0, to_channels_last=False):
+        self.normalize = normalize
+        self.max_value = float(max_value)
+        self.to_channels_last = to_channels_last
+
         if clean_images is not None and noisy_images is not None:
-            # Uporabi podane tensors (že v CHW formatu)
-            self.clean = [clean_images[i] for i in range(len(clean_images))]
-            self.noisy = [noisy_images[i] for i in range(len(noisy_images))]
+            self.clean = self._stack_and_prepare(clean_images)
+            self.noisy = self._stack_and_prepare(noisy_images)
         else:
-            # Generiraj na novo
-            self.clean = []
-            self.noisy = []
+            clean_list = []
+            noisy_list = []
             for _ in range(num_samples):
-                img = generate_image(256, 256, 5, 5, 5, 5)  # HWC format
+                img = generate_image(256, 256, 5, 5, 5, 5)  # HWC numpy
                 noisy = noise_fn(img, np.random.uniform(*noise_range))
-                # Pretvori v CHW format
-                self.clean.append(torch.tensor(img.transpose(2, 0, 1), dtype=torch.float32))
-                self.noisy.append(torch.tensor(noisy.transpose(2, 0, 1), dtype=torch.float32))
+                clean_list.append(img)
+                noisy_list.append(noisy)
+            self.clean = self._stack_and_prepare(clean_list)
+            self.noisy = self._stack_and_prepare(noisy_list)
+
+        assert self.clean.shape[0] == self.noisy.shape[0], "Mismatched dataset sizes"
 
     def __len__(self):
-        return len(self.clean)
+        return self.clean.shape[0]
 
     def __getitem__(self, idx):
+        # Return direct indexed tensors (fast). Do not clone here.
         return self.noisy[idx], self.clean[idx]
+
+    def _as_tensor(self, img):
+        t = torch.as_tensor(img)
+        # convert HWC -> CHW if needed
+        if t.ndim == 3 and t.shape[2] in (1, 3):
+            t = t.permute(2, 0, 1).contiguous()
+        elif t.ndim == 2:
+            t = t.unsqueeze(0).contiguous()
+        return t.float()
+
+    def _stack_and_prepare(self, arr):
+        # If input already stacked tensor
+        if isinstance(arr, torch.Tensor) and arr.ndim == 4:
+            t = arr.float().contiguous()
+        else:
+            # handle numpy stacked array shape [N, H, W, C] or iterable
+            if isinstance(arr, np.ndarray) and arr.ndim == 4:
+                items = [self._as_tensor(arr[i]) for i in range(arr.shape[0])]
+            else:
+                items = [self._as_tensor(x) for x in arr]
+            t = torch.stack(items, dim=0)  # [N, C, H, W]
+
+        if self.normalize:
+            # detect 0..255-like data
+            if t.max().item() > 1.1:
+                t = t / self.max_value
+            t = t.clamp(0.0, 1.0)
+
+        # optional memory format for faster conv on GPU
+        if self.to_channels_last:
+            t = t.contiguous(memory_format=torch.channels_last)
+
+        return t.contiguous()
 
 
 # Eval model utility
@@ -196,7 +237,7 @@ def evaluate_model(model, dataloader, device, max_batches=None):
 
             # SNR in PSNR za vsak sample v batch
             for i in range(clean.size(0)):
-                snr = calculate_snr(clean[i], noisy[i])
+                snr = calculate_snr(clean[i], denoised[i])  # Compare clean vs denoised
                 psnr = calculate_psnr(clean[i], denoised[i])
                 total_snr += snr
                 total_psnr += psnr
