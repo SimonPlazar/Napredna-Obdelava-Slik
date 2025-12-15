@@ -180,35 +180,96 @@ class SyntheticNoiseDataset(Dataset):
         return t.contiguous()
 
 
+# =============================================================================
+# DATASET UTILITIES
+# =============================================================================
+from pathlib import Path
+import pickle
+
+
+def load_dataset_arrays(checkpoint_dir, dataset_name):
+    """
+    Naloži dataset arrays iz pickle file.
+
+    Args:
+        checkpoint_dir: Direktorij s checkpointi
+        dataset_name: Ime dataseta ('train' ali 'val')
+
+    Returns:
+        (clean_images, noisy_images) ali (None, None) če ne obstaja
+    """
+    checkpoint_dir = Path(checkpoint_dir)
+    dataset_path = checkpoint_dir / f"{dataset_name}_dataset.pkl"
+
+    if dataset_path.exists():
+        print(f"📂 Loading {dataset_name} dataset from {dataset_path}")
+        with open(dataset_path, 'rb') as f:
+            data = pickle.load(f)
+
+        clean_images = data['clean']
+        noisy_images = data['noisy']
+        print(f"✅ Loaded {len(clean_images)} samples")
+        return clean_images, noisy_images
+    else:
+        print(f"⚠️ No {dataset_name} dataset found at {dataset_path}")
+        return None, None
+
+
+def save_dataset_arrays(checkpoint_dir, dataset_name, dataset, overwrite=False):
+    """
+    Save dataset tensors to `checkpoint_dir/{dataset_name}_dataset.pkl`.
+    Accepts `dataset.clean`/`dataset.noisy` as either:
+      - a stacked torch.Tensor shape [N, C, H, W], or
+      - an iterable/list of per-sample tensors/arrays.
+    """
+    checkpoint_dir = Path(checkpoint_dir)
+    checkpoint_dir.mkdir(exist_ok=True)
+    dataset_path = checkpoint_dir / f"{dataset_name}_dataset.pkl"
+
+    if dataset_path.exists() and not overwrite:
+        print(f"⚠️ Dataset already exists at {dataset_path}. Set overwrite=True to replace.")
+        return
+
+    def _ensure_stacked(tensors):
+        # If already a tensor, use it; otherwise try to stack an iterable
+        if isinstance(tensors, torch.Tensor):
+            t = tensors
+        else:
+            t = torch.stack(list(tensors), dim=0)
+        # detach, move to cpu and make contiguous for safe pickling
+        return t.detach().cpu().contiguous()
+
+    clean_t = _ensure_stacked(dataset.clean)
+    noisy_t = _ensure_stacked(dataset.noisy)
+
+    data = {
+        'clean': clean_t,
+        'noisy': noisy_t
+    }
+
+    print(f"💾 Saving {dataset_name} dataset to {dataset_path}")
+    with open(dataset_path, 'wb') as f:
+        pickle.dump(data, f)
+
+    print(f"✅ Saved {clean_t.shape[0]} samples")
+
+
 # Eval model utility
 
-def calculate_snr(clean, noisy):
-    """
-    Signal-to-Noise Ratio (SNR) v dB.
-    SNR = 10 * log10(signal_power / noise_power)
-    """
+def calculate_psnr(clean, denoised, max_value=1.0, eps=1e-10):
+    """Peak Signal-to-Noise Ratio (PSNR) in dB."""
+    mse = torch.mean((clean - denoised) ** 2)
+    mse = torch.clamp(mse, min=eps)
+    max_val_tensor = torch.tensor(max_value, device=mse.device, dtype=mse.dtype)
+    return 20.0 * torch.log10(max_val_tensor) - 10.0 * torch.log10(mse)
+
+
+def calculate_snr(clean, noisy, eps=1e-10):
+    """Signal-to-Noise Ratio (SNR) in dB."""
     signal_power = torch.mean(clean ** 2)
     noise_power = torch.mean((clean - noisy) ** 2)
-
-    if noise_power < 1e-10:
-        return float('inf')
-
-    snr = 10 * torch.log10(signal_power / noise_power)
-    return snr.item()
-
-
-def calculate_psnr(clean, denoised, max_value=1.0):
-    """
-    Peak Signal-to-Noise Ratio (PSNR) v dB.
-    PSNR = 20 * log10(MAX) - 10 * log10(MSE)
-    """
-    mse = torch.mean((clean - denoised) ** 2)
-
-    if mse < 1e-10:
-        return float('inf')
-
-    psnr = 20 * torch.log10(torch.tensor(max_value)) - 10 * torch.log10(mse)
-    return psnr.item()
+    noise_power = torch.clamp(noise_power, min=eps)
+    return 10.0 * torch.log10(signal_power / noise_power)
 
 
 def evaluate_model(model, dataloader, device, max_batches=None):
@@ -237,8 +298,8 @@ def evaluate_model(model, dataloader, device, max_batches=None):
 
             # SNR in PSNR za vsak sample v batch
             for i in range(clean.size(0)):
-                snr = calculate_snr(clean[i], denoised[i])  # Compare clean vs denoised
-                psnr = calculate_psnr(clean[i], denoised[i])
+                snr = calculate_snr(clean[i], denoised[i]).item()
+                psnr = calculate_psnr(clean[i], denoised[i]).item()
                 total_snr += snr
                 total_psnr += psnr
 
