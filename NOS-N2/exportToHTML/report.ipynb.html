@@ -1,0 +1,643 @@
+<html>
+<head>
+<title>report.ipynb</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #bcbec4;}
+.s1 { color: #cf8e6d;}
+.s2 { color: #bcbec4;}
+.s3 { color: #6aab73;}
+.s4 { color: #5f826b; font-style: italic;}
+.s5 { color: #7a7e85;}
+.s6 { color: #2aacb8;}
+.ls0 { height: 1px; border-width: 0; color: #43454a; background-color:#43454a}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+report.ipynb</font>
+</center></td></tr></table>
+<pre><span class="s0">#%% 
+</span><span class="s1">import </span><span class="s0">os</span>
+<span class="s1">import </span><span class="s0">cv2</span>
+<span class="s1">import </span><span class="s0">numpy </span><span class="s1">as </span><span class="s0">np</span>
+<span class="s1">from </span><span class="s0">pathlib </span><span class="s1">import </span><span class="s0">Path</span>
+<span class="s1">import </span><span class="s0">matplotlib</span><span class="s2">.</span><span class="s0">pyplot </span><span class="s1">as </span><span class="s0">plt</span>
+
+<span class="s1">from </span><span class="s0">torchinfo </span><span class="s1">import </span><span class="s0">summary</span>
+<span class="s1">import </span><span class="s0">torch</span>
+
+<span class="s1">from </span><span class="s0">Model </span><span class="s1">import </span><span class="s0">SuperResolution</span><span class="s2">, </span><span class="s0">TestDataset</span><span class="s2">, </span><span class="s0">reconstruct_rgb_from_ycbcr</span><span class="s2">, </span><span class="s0">calculate_psnr</span><span class="s2">, </span><span class="s0">calculate_ssim</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s1">def </span><span class="s0">analyze_dataset</span><span class="s2">(</span><span class="s0">dataset_dir</span><span class="s2">, </span><span class="s0">dataset_name</span><span class="s2">=</span><span class="s3">&quot;Dataset&quot;</span><span class="s2">):</span>
+    <span class="s4">&quot;&quot;&quot; 
+    Analyze image dataset and print statistics. 
+ 
+    Args: 
+        dataset_dir: Path to the dataset directory 
+        dataset_name: Name of the dataset for display 
+ 
+    Returns: 
+        dict: Dictionary containing statistics (num_images, avg_width, avg_height, image_sizes) 
+    &quot;&quot;&quot;</span>
+    <span class="s0">image_sizes </span><span class="s2">= []</span>
+
+    <span class="s0">image_files </span><span class="s2">= </span><span class="s0">sorted</span><span class="s2">(</span><span class="s0">os</span><span class="s2">.</span><span class="s0">listdir</span><span class="s2">(</span><span class="s0">dataset_dir</span><span class="s2">))</span>
+
+    <span class="s1">for </span><span class="s0">fname </span><span class="s1">in </span><span class="s0">image_files</span><span class="s2">:</span>
+        <span class="s0">path </span><span class="s2">= </span><span class="s0">os</span><span class="s2">.</span><span class="s0">path</span><span class="s2">.</span><span class="s0">join</span><span class="s2">(</span><span class="s0">dataset_dir</span><span class="s2">, </span><span class="s0">fname</span><span class="s2">)</span>
+
+        <span class="s5"># odpremo sliko</span>
+        <span class="s0">img </span><span class="s2">= </span><span class="s0">cv2</span><span class="s2">.</span><span class="s0">imread</span><span class="s2">(</span><span class="s0">path</span><span class="s2">)</span>
+        <span class="s1">if </span><span class="s0">img </span><span class="s1">is not None</span><span class="s2">:</span>
+            <span class="s0">height</span><span class="s2">, </span><span class="s0">width </span><span class="s2">= </span><span class="s0">img</span><span class="s2">.</span><span class="s0">shape</span><span class="s2">[:</span><span class="s6">2</span><span class="s2">]</span>
+            <span class="s0">image_sizes</span><span class="s2">.</span><span class="s0">append</span><span class="s2">((</span><span class="s0">width</span><span class="s2">, </span><span class="s0">height</span><span class="s2">))</span>
+
+    <span class="s0">num_images </span><span class="s2">= </span><span class="s0">len</span><span class="s2">(</span><span class="s0">image_sizes</span><span class="s2">)</span>
+
+    <span class="s0">widths </span><span class="s2">= [</span><span class="s0">w </span><span class="s1">for </span><span class="s0">w</span><span class="s2">, </span><span class="s0">h </span><span class="s1">in </span><span class="s0">image_sizes</span><span class="s2">]</span>
+    <span class="s0">heights </span><span class="s2">= [</span><span class="s0">h </span><span class="s1">for </span><span class="s0">w</span><span class="s2">, </span><span class="s0">h </span><span class="s1">in </span><span class="s0">image_sizes</span><span class="s2">]</span>
+
+    <span class="s0">min_width </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">min</span><span class="s2">(</span><span class="s0">widths</span><span class="s2">)</span>
+    <span class="s0">max_width </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">max</span><span class="s2">(</span><span class="s0">widths</span><span class="s2">)</span>
+    <span class="s0">min_height </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">min</span><span class="s2">(</span><span class="s0">heights</span><span class="s2">)</span>
+    <span class="s0">max_height </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">max</span><span class="s2">(</span><span class="s0">heights</span><span class="s2">)</span>
+
+    <span class="s0">avg_width </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">widths</span><span class="s2">)</span>
+    <span class="s0">std_width </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">std</span><span class="s2">(</span><span class="s0">widths</span><span class="s2">)</span>
+    <span class="s0">avg_height </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">heights</span><span class="s2">)</span>
+    <span class="s0">std_height </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">std</span><span class="s2">(</span><span class="s0">heights</span><span class="s2">)</span>
+
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Dataset: </span><span class="s1">{</span><span class="s0">dataset_name</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Število slik:          </span><span class="s1">{</span><span class="s0">num_images</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Interval širine slik:  [</span><span class="s1">{</span><span class="s0">min_width</span><span class="s1">}</span><span class="s3">, </span><span class="s1">{</span><span class="s0">max_width</span><span class="s1">}</span><span class="s3">]&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Interval višine slik:  [</span><span class="s1">{</span><span class="s0">min_height</span><span class="s1">}</span><span class="s3">, </span><span class="s1">{</span><span class="s0">max_height</span><span class="s1">}</span><span class="s3">]&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Povprečna širina slik: </span><span class="s1">{</span><span class="s0">avg_width</span><span class="s1">:</span><span class="s3">.2f</span><span class="s1">} </span><span class="s3">+- </span><span class="s1">{</span><span class="s0">std_width</span><span class="s1">:</span><span class="s3">.2f</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Povprečna višina slik: </span><span class="s1">{</span><span class="s0">avg_height</span><span class="s1">:</span><span class="s3">.2f</span><span class="s1">} </span><span class="s3">+- </span><span class="s1">{</span><span class="s0">std_height</span><span class="s1">:</span><span class="s3">.2f</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">()</span>
+
+    <span class="s5"># Prikaz 5 primerov slik iz dataseta</span>
+    <span class="s0">fig</span><span class="s2">, </span><span class="s0">axes </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s6">1</span><span class="s2">, </span><span class="s6">5</span><span class="s2">, </span><span class="s0">figsize</span><span class="s2">=(</span><span class="s6">20</span><span class="s2">, </span><span class="s6">4</span><span class="s2">))</span>
+
+    <span class="s1">for </span><span class="s0">i </span><span class="s1">in </span><span class="s0">range</span><span class="s2">(</span><span class="s0">min</span><span class="s2">(</span><span class="s6">5</span><span class="s2">, </span><span class="s0">len</span><span class="s2">(</span><span class="s0">image_files</span><span class="s2">))):</span>
+        <span class="s0">img_path </span><span class="s2">= </span><span class="s0">os</span><span class="s2">.</span><span class="s0">path</span><span class="s2">.</span><span class="s0">join</span><span class="s2">(</span><span class="s0">dataset_dir</span><span class="s2">, </span><span class="s0">image_files</span><span class="s2">[</span><span class="s0">i</span><span class="s2">])</span>
+        <span class="s0">img </span><span class="s2">= </span><span class="s0">cv2</span><span class="s2">.</span><span class="s0">imread</span><span class="s2">(</span><span class="s0">img_path</span><span class="s2">)</span>
+        <span class="s0">img </span><span class="s2">= </span><span class="s0">cv2</span><span class="s2">.</span><span class="s0">cvtColor</span><span class="s2">(</span><span class="s0">img</span><span class="s2">, </span><span class="s0">cv2</span><span class="s2">.</span><span class="s0">COLOR_BGR2RGB</span><span class="s2">)</span>
+        <span class="s0">axes</span><span class="s2">[</span><span class="s0">i</span><span class="s2">].</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">img</span><span class="s2">)</span>
+        <span class="s0">axes</span><span class="s2">[</span><span class="s0">i</span><span class="s2">].</span><span class="s0">set_title</span><span class="s2">(</span><span class="s0">image_files</span><span class="s2">[</span><span class="s0">i</span><span class="s2">])</span>
+        <span class="s0">axes</span><span class="s2">[</span><span class="s0">i</span><span class="s2">].</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">&quot;off&quot;</span><span class="s2">)</span>
+
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span><hr class="ls0"><span class="s0">#%% 
+T91_DIR </span><span class="s2">= </span><span class="s0">os</span><span class="s2">.</span><span class="s0">path</span><span class="s2">.</span><span class="s0">join</span><span class="s2">(</span><span class="s3">&quot;datasets&quot;</span><span class="s2">, </span><span class="s3">&quot;T91&quot;</span><span class="s2">)</span>
+
+<span class="s1">assert </span><span class="s0">os</span><span class="s2">.</span><span class="s0">path</span><span class="s2">.</span><span class="s0">isdir</span><span class="s2">(</span><span class="s0">T91_DIR</span><span class="s2">), </span><span class="s3">f&quot;Mapa </span><span class="s1">{</span><span class="s0">T91_DIR</span><span class="s1">} </span><span class="s3">ne obstaja&quot;</span>
+
+<span class="s0">analyze_dataset</span><span class="s2">(</span><span class="s0">T91_DIR</span><span class="s2">, </span><span class="s3">&quot;T91&quot;</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+SET5_DIR </span><span class="s2">= </span><span class="s0">os</span><span class="s2">.</span><span class="s0">path</span><span class="s2">.</span><span class="s0">join</span><span class="s2">(</span><span class="s3">&quot;datasets&quot;</span><span class="s2">, </span><span class="s3">&quot;Set5&quot;</span><span class="s2">)</span>
+<span class="s0">SET14_DIR </span><span class="s2">= </span><span class="s0">os</span><span class="s2">.</span><span class="s0">path</span><span class="s2">.</span><span class="s0">join</span><span class="s2">(</span><span class="s3">&quot;datasets&quot;</span><span class="s2">, </span><span class="s3">&quot;Set14&quot;</span><span class="s2">)</span>
+
+<span class="s1">assert </span><span class="s0">os</span><span class="s2">.</span><span class="s0">path</span><span class="s2">.</span><span class="s0">isdir</span><span class="s2">(</span><span class="s0">SET5_DIR</span><span class="s2">), </span><span class="s3">&quot;Mapa Set5 ne obstaja&quot;</span>
+<span class="s1">assert </span><span class="s0">os</span><span class="s2">.</span><span class="s0">path</span><span class="s2">.</span><span class="s0">isdir</span><span class="s2">(</span><span class="s0">SET14_DIR</span><span class="s2">), </span><span class="s3">&quot;Mapa Set14 ne obstaja&quot;</span>
+
+<span class="s0">analyze_dataset</span><span class="s2">(</span><span class="s0">SET5_DIR</span><span class="s2">, </span><span class="s3">&quot;Set5&quot;</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+analyze_dataset</span><span class="s2">(</span><span class="s0">SET14_DIR</span><span class="s2">, </span><span class="s3">&quot;Set14&quot;</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s1">from </span><span class="s0">Model </span><span class="s1">import </span><span class="s0">make_low_resolution</span>
+
+<span class="s0">dataset_path </span><span class="s2">= </span><span class="s0">Path</span><span class="s2">(</span><span class="s0">T91_DIR</span><span class="s2">)</span>
+<span class="s0">image_files </span><span class="s2">= </span><span class="s0">list</span><span class="s2">(</span><span class="s0">dataset_path</span><span class="s2">.</span><span class="s0">glob</span><span class="s2">(</span><span class="s3">'*.png'</span><span class="s2">))</span>
+
+<span class="s5"># naložimo eno testno sliko</span>
+<span class="s0">test_img_path </span><span class="s2">= </span><span class="s0">str</span><span class="s2">(</span><span class="s0">image_files</span><span class="s2">[</span><span class="s6">0</span><span class="s2">])  </span><span class="s5"># Convert Path to string</span>
+<span class="s0">original </span><span class="s2">= </span><span class="s0">cv2</span><span class="s2">.</span><span class="s0">imread</span><span class="s2">(</span><span class="s0">test_img_path</span><span class="s2">)</span>
+
+<span class="s0">original_rgb </span><span class="s2">= </span><span class="s0">cv2</span><span class="s2">.</span><span class="s0">cvtColor</span><span class="s2">(</span><span class="s0">original</span><span class="s2">, </span><span class="s0">cv2</span><span class="s2">.</span><span class="s0">COLOR_BGR2RGB</span><span class="s2">)</span>
+
+<span class="s0">low_res_x2 </span><span class="s2">= </span><span class="s0">make_low_resolution</span><span class="s2">(</span><span class="s0">original</span><span class="s2">, </span><span class="s0">scale</span><span class="s2">=</span><span class="s6">2</span><span class="s2">)</span>
+<span class="s0">low_res_x2_rgb </span><span class="s2">= </span><span class="s0">cv2</span><span class="s2">.</span><span class="s0">cvtColor</span><span class="s2">(</span><span class="s0">low_res_x2</span><span class="s2">, </span><span class="s0">cv2</span><span class="s2">.</span><span class="s0">COLOR_BGR2RGB</span><span class="s2">)</span>
+
+<span class="s0">low_res_x3 </span><span class="s2">= </span><span class="s0">make_low_resolution</span><span class="s2">(</span><span class="s0">original</span><span class="s2">, </span><span class="s0">scale</span><span class="s2">=</span><span class="s6">3</span><span class="s2">)</span>
+<span class="s0">low_res_x3_rgb </span><span class="s2">= </span><span class="s0">cv2</span><span class="s2">.</span><span class="s0">cvtColor</span><span class="s2">(</span><span class="s0">low_res_x3</span><span class="s2">, </span><span class="s0">cv2</span><span class="s2">.</span><span class="s0">COLOR_BGR2RGB</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">figure</span><span class="s2">(</span><span class="s0">figsize</span><span class="s2">=(</span><span class="s6">12</span><span class="s2">, </span><span class="s6">4</span><span class="s2">))</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">subplot</span><span class="s2">(</span><span class="s6">1</span><span class="s2">, </span><span class="s6">3</span><span class="s2">, </span><span class="s6">1</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">original_rgb</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">title</span><span class="s2">(</span><span class="s3">&quot;Original&quot;</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">&quot;off&quot;</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">subplot</span><span class="s2">(</span><span class="s6">1</span><span class="s2">, </span><span class="s6">3</span><span class="s2">, </span><span class="s6">2</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">low_res_x2_rgb</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">title</span><span class="s2">(</span><span class="s3">&quot;Low-res x2&quot;</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">&quot;off&quot;</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">subplot</span><span class="s2">(</span><span class="s6">1</span><span class="s2">, </span><span class="s6">3</span><span class="s2">, </span><span class="s6">3</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">low_res_x3_rgb</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">title</span><span class="s2">(</span><span class="s3">&quot;Low-res x3&quot;</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">&quot;off&quot;</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s1">from </span><span class="s0">Model </span><span class="s1">import </span><span class="s0">T91TrainDataset</span>
+
+<span class="s0">dataset </span><span class="s2">= </span><span class="s0">T91TrainDataset</span><span class="s2">(</span>
+    <span class="s0">dataset_dir</span><span class="s2">=</span><span class="s0">T91_DIR</span><span class="s2">,</span>
+    <span class="s0">scale_factor</span><span class="s2">=</span><span class="s6">2</span><span class="s2">,</span>
+    <span class="s0">patch_size</span><span class="s2">=</span><span class="s6">33</span><span class="s2">,</span>
+    <span class="s0">min_patches</span><span class="s2">=</span><span class="s6">1000</span>
+<span class="s2">)</span>
+
+<span class="s5"># Pick any index from your dataset</span>
+<span class="s0">idx </span><span class="s2">= </span><span class="s6">42</span>
+
+<span class="s5"># Get full images</span>
+<span class="s0">lr_full</span><span class="s2">, </span><span class="s0">hr_full </span><span class="s2">= </span><span class="s0">dataset</span><span class="s2">.</span><span class="s0">get_original</span><span class="s2">(</span><span class="s0">idx</span><span class="s2">)</span>
+
+<span class="s5"># Get 4 random patches from the SAME image</span>
+<span class="s0">patches </span><span class="s2">= []</span>
+<span class="s1">for </span><span class="s0">_ </span><span class="s1">in </span><span class="s0">range</span><span class="s2">(</span><span class="s6">4</span><span class="s2">):</span>
+    <span class="s0">lr_patch</span><span class="s2">, </span><span class="s0">hr_patch </span><span class="s2">= </span><span class="s0">dataset</span><span class="s2">[</span><span class="s0">idx</span><span class="s2">]</span>
+    <span class="s0">patches</span><span class="s2">.</span><span class="s0">append</span><span class="s2">((</span><span class="s0">lr_patch</span><span class="s2">, </span><span class="s0">hr_patch</span><span class="s2">))</span>
+
+<span class="s5"># Create figure with subplots</span>
+<span class="s0">fig </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">figure</span><span class="s2">(</span><span class="s0">figsize</span><span class="s2">=(</span><span class="s6">16</span><span class="s2">, </span><span class="s6">10</span><span class="s2">))</span>
+
+<span class="s5"># First row: Full images</span>
+<span class="s0">ax1 </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplot</span><span class="s2">(</span><span class="s6">3</span><span class="s2">, </span><span class="s6">4</span><span class="s2">, (</span><span class="s6">1</span><span class="s2">, </span><span class="s6">2</span><span class="s2">))</span>
+<span class="s0">ax1</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">hr_full</span><span class="s2">[:, :, </span><span class="s6">0</span><span class="s2">], </span><span class="s0">cmap</span><span class="s2">=</span><span class="s3">'gray'</span><span class="s2">)</span>
+<span class="s0">ax1</span><span class="s2">.</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">'High-Res (Full)'</span><span class="s2">)</span>
+<span class="s0">ax1</span><span class="s2">.</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">'off'</span><span class="s2">)</span>
+
+<span class="s0">ax2 </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplot</span><span class="s2">(</span><span class="s6">3</span><span class="s2">, </span><span class="s6">4</span><span class="s2">, (</span><span class="s6">3</span><span class="s2">, </span><span class="s6">4</span><span class="s2">))</span>
+<span class="s0">ax2</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">lr_full</span><span class="s2">[:, :, </span><span class="s6">0</span><span class="s2">], </span><span class="s0">cmap</span><span class="s2">=</span><span class="s3">'gray'</span><span class="s2">)</span>
+<span class="s0">ax2</span><span class="s2">.</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">'Low-Res (Full)'</span><span class="s2">)</span>
+<span class="s0">ax2</span><span class="s2">.</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">'off'</span><span class="s2">)</span>
+
+<span class="s5"># Second row: High-res patches</span>
+<span class="s1">for </span><span class="s0">i </span><span class="s1">in </span><span class="s0">range</span><span class="s2">(</span><span class="s6">4</span><span class="s2">):</span>
+    <span class="s0">ax </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplot</span><span class="s2">(</span><span class="s6">3</span><span class="s2">, </span><span class="s6">4</span><span class="s2">, </span><span class="s0">i </span><span class="s2">+ </span><span class="s6">5</span><span class="s2">)</span>
+    <span class="s0">hr_patch </span><span class="s2">= </span><span class="s0">patches</span><span class="s2">[</span><span class="s0">i</span><span class="s2">][</span><span class="s6">1</span><span class="s2">].</span><span class="s0">squeeze</span><span class="s2">(</span><span class="s6">0</span><span class="s2">).</span><span class="s0">numpy</span><span class="s2">()</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">hr_patch</span><span class="s2">, </span><span class="s0">cmap</span><span class="s2">=</span><span class="s3">'gray'</span><span class="s2">, </span><span class="s0">interpolation</span><span class="s2">=</span><span class="s3">'none'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">f'HR Patch </span><span class="s1">{</span><span class="s0">i </span><span class="s2">+ </span><span class="s6">1</span><span class="s1">} </span><span class="s3">(</span><span class="s1">{</span><span class="s0">hr_patch</span><span class="s2">.</span><span class="s0">shape</span><span class="s2">[</span><span class="s6">0</span><span class="s2">]</span><span class="s1">}</span><span class="s3">x</span><span class="s1">{</span><span class="s0">hr_patch</span><span class="s2">.</span><span class="s0">shape</span><span class="s2">[</span><span class="s6">1</span><span class="s2">]</span><span class="s1">}</span><span class="s3">)'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">'off'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_aspect</span><span class="s2">(</span><span class="s3">'equal'</span><span class="s2">)  </span><span class="s5"># Keep aspect ratio</span>
+
+<span class="s5"># Third row: Low-res patches</span>
+<span class="s1">for </span><span class="s0">i </span><span class="s1">in </span><span class="s0">range</span><span class="s2">(</span><span class="s6">4</span><span class="s2">):</span>
+    <span class="s0">ax </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplot</span><span class="s2">(</span><span class="s6">3</span><span class="s2">, </span><span class="s6">4</span><span class="s2">, </span><span class="s0">i </span><span class="s2">+ </span><span class="s6">9</span><span class="s2">)</span>
+    <span class="s0">lr_patch </span><span class="s2">= </span><span class="s0">patches</span><span class="s2">[</span><span class="s0">i</span><span class="s2">][</span><span class="s6">0</span><span class="s2">].</span><span class="s0">squeeze</span><span class="s2">(</span><span class="s6">0</span><span class="s2">).</span><span class="s0">numpy</span><span class="s2">()</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">lr_patch</span><span class="s2">, </span><span class="s0">cmap</span><span class="s2">=</span><span class="s3">'gray'</span><span class="s2">, </span><span class="s0">interpolation</span><span class="s2">=</span><span class="s3">'none'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">f'LR Patch </span><span class="s1">{</span><span class="s0">i </span><span class="s2">+ </span><span class="s6">1</span><span class="s1">} </span><span class="s3">(</span><span class="s1">{</span><span class="s0">lr_patch</span><span class="s2">.</span><span class="s0">shape</span><span class="s2">[</span><span class="s6">0</span><span class="s2">]</span><span class="s1">}</span><span class="s3">x</span><span class="s1">{</span><span class="s0">lr_patch</span><span class="s2">.</span><span class="s0">shape</span><span class="s2">[</span><span class="s6">1</span><span class="s2">]</span><span class="s1">}</span><span class="s3">)'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">'off'</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_aspect</span><span class="s2">(</span><span class="s3">'equal'</span><span class="s2">)  </span><span class="s5"># Keep aspect ratio</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Full LR shape: </span><span class="s1">{</span><span class="s0">lr_full</span><span class="s2">.</span><span class="s0">shape</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Full HR shape: </span><span class="s1">{</span><span class="s0">hr_full</span><span class="s2">.</span><span class="s0">shape</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Patch LR shape: </span><span class="s1">{</span><span class="s0">patches</span><span class="s2">[</span><span class="s6">0</span><span class="s2">][</span><span class="s6">0</span><span class="s2">].</span><span class="s0">shape</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Patch HR shape: </span><span class="s1">{</span><span class="s0">patches</span><span class="s2">[</span><span class="s6">0</span><span class="s2">][</span><span class="s6">1</span><span class="s2">].</span><span class="s0">shape</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s1">from </span><span class="s0">Model </span><span class="s1">import </span><span class="s0">TestDataset</span>
+
+<span class="s5"># Load test dataset</span>
+<span class="s0">set_dataset </span><span class="s2">= </span><span class="s0">TestDataset</span><span class="s2">(</span><span class="s0">SET5_DIR</span><span class="s2">, </span><span class="s0">scale_factor</span><span class="s2">=</span><span class="s6">2</span><span class="s2">)</span>
+
+<span class="s5"># Display first 3 images</span>
+<span class="s0">num_images </span><span class="s2">= </span><span class="s0">min</span><span class="s2">(</span><span class="s6">3</span><span class="s2">, </span><span class="s0">len</span><span class="s2">(</span><span class="s0">set_dataset</span><span class="s2">))</span>
+<span class="s0">fig</span><span class="s2">, </span><span class="s0">axes </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s0">num_images</span><span class="s2">, </span><span class="s6">2</span><span class="s2">, </span><span class="s0">figsize</span><span class="s2">=(</span><span class="s6">10</span><span class="s2">, </span><span class="s6">5 </span><span class="s2">* </span><span class="s0">num_images</span><span class="s2">))</span>
+
+<span class="s5"># Handle single image case</span>
+<span class="s1">if </span><span class="s0">num_images </span><span class="s2">== </span><span class="s6">1</span><span class="s2">:</span>
+    <span class="s0">axes </span><span class="s2">= </span><span class="s0">axes</span><span class="s2">.</span><span class="s0">reshape</span><span class="s2">(</span><span class="s6">1</span><span class="s2">, -</span><span class="s6">1</span><span class="s2">)</span>
+
+<span class="s1">for </span><span class="s0">i </span><span class="s1">in </span><span class="s0">range</span><span class="s2">(</span><span class="s0">num_images</span><span class="s2">):</span>
+    <span class="s0">lr_ycbcr</span><span class="s2">, </span><span class="s0">hr_ycbcr </span><span class="s2">= </span><span class="s0">set_dataset</span><span class="s2">[</span><span class="s0">i</span><span class="s2">]</span>
+    <span class="s0">filename </span><span class="s2">= </span><span class="s0">set_dataset</span><span class="s2">.</span><span class="s0">get_filename</span><span class="s2">(</span><span class="s0">i</span><span class="s2">)</span>
+
+    <span class="s5"># Convert YCbCr back to RGB for display</span>
+    <span class="s0">lr_rgb </span><span class="s2">= </span><span class="s0">cv2</span><span class="s2">.</span><span class="s0">cvtColor</span><span class="s2">((</span><span class="s0">lr_ycbcr </span><span class="s2">* </span><span class="s6">255</span><span class="s2">).</span><span class="s0">astype</span><span class="s2">(</span><span class="s0">np</span><span class="s2">.</span><span class="s0">uint8</span><span class="s2">), </span><span class="s0">cv2</span><span class="s2">.</span><span class="s0">COLOR_YCrCb2RGB</span><span class="s2">)</span>
+    <span class="s0">hr_rgb </span><span class="s2">= </span><span class="s0">cv2</span><span class="s2">.</span><span class="s0">cvtColor</span><span class="s2">((</span><span class="s0">hr_ycbcr </span><span class="s2">* </span><span class="s6">255</span><span class="s2">).</span><span class="s0">astype</span><span class="s2">(</span><span class="s0">np</span><span class="s2">.</span><span class="s0">uint8</span><span class="s2">), </span><span class="s0">cv2</span><span class="s2">.</span><span class="s0">COLOR_YCrCb2RGB</span><span class="s2">)</span>
+
+    <span class="s5"># High-res image</span>
+    <span class="s0">axes</span><span class="s2">[</span><span class="s0">i</span><span class="s2">, </span><span class="s6">0</span><span class="s2">].</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">hr_rgb</span><span class="s2">)</span>
+    <span class="s0">axes</span><span class="s2">[</span><span class="s0">i</span><span class="s2">, </span><span class="s6">0</span><span class="s2">].</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">f'HR: </span><span class="s1">{</span><span class="s0">filename</span><span class="s1">}\n{</span><span class="s0">hr_rgb</span><span class="s2">.</span><span class="s0">shape</span><span class="s2">[</span><span class="s6">1</span><span class="s2">]</span><span class="s1">}</span><span class="s3">x</span><span class="s1">{</span><span class="s0">hr_rgb</span><span class="s2">.</span><span class="s0">shape</span><span class="s2">[</span><span class="s6">0</span><span class="s2">]</span><span class="s1">}</span><span class="s3">'</span><span class="s2">)</span>
+    <span class="s0">axes</span><span class="s2">[</span><span class="s0">i</span><span class="s2">, </span><span class="s6">0</span><span class="s2">].</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">'off'</span><span class="s2">)</span>
+
+    <span class="s5"># Low-res image</span>
+    <span class="s0">axes</span><span class="s2">[</span><span class="s0">i</span><span class="s2">, </span><span class="s6">1</span><span class="s2">].</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">lr_rgb</span><span class="s2">, </span><span class="s0">interpolation</span><span class="s2">=</span><span class="s3">'nearest'</span><span class="s2">)</span>
+    <span class="s0">axes</span><span class="s2">[</span><span class="s0">i</span><span class="s2">, </span><span class="s6">1</span><span class="s2">].</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">f'LR: </span><span class="s1">{</span><span class="s0">filename</span><span class="s1">}\n{</span><span class="s0">lr_rgb</span><span class="s2">.</span><span class="s0">shape</span><span class="s2">[</span><span class="s6">1</span><span class="s2">]</span><span class="s1">}</span><span class="s3">x</span><span class="s1">{</span><span class="s0">lr_rgb</span><span class="s2">.</span><span class="s0">shape</span><span class="s2">[</span><span class="s6">0</span><span class="s2">]</span><span class="s1">}</span><span class="s3">'</span><span class="s2">)</span>
+    <span class="s0">axes</span><span class="s2">[</span><span class="s0">i</span><span class="s2">, </span><span class="s6">1</span><span class="s2">].</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">'off'</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Dataset size: </span><span class="s1">{</span><span class="s0">len</span><span class="s2">(</span><span class="s0">set_dataset</span><span class="s2">)</span><span class="s1">} </span><span class="s3">images&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;LR shape: </span><span class="s1">{</span><span class="s0">set_dataset</span><span class="s2">[</span><span class="s6">0</span><span class="s2">][</span><span class="s6">0</span><span class="s2">].</span><span class="s0">shape</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;HR shape: </span><span class="s1">{</span><span class="s0">set_dataset</span><span class="s2">[</span><span class="s6">0</span><span class="s2">][</span><span class="s6">1</span><span class="s2">].</span><span class="s0">shape</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+model </span><span class="s2">= </span><span class="s0">SuperResolution</span><span class="s2">()</span>
+<span class="s0">summary</span><span class="s2">(</span><span class="s0">model</span><span class="s2">, </span><span class="s0">input_size</span><span class="s2">=(</span><span class="s6">1</span><span class="s2">, </span><span class="s6">1</span><span class="s2">, </span><span class="s6">33</span><span class="s2">, </span><span class="s6">33</span><span class="s2">))</span>
+<hr class="ls0"><span class="s0">#%% 
+</span><span class="s5"># # LOAD BEST MODEL</span>
+<span class="s5"># SCALE_FACTOR = 2</span>
+<span class="s5"># checkpoint_dir = Path(f&quot;./checkpoints_x{SCALE_FACTOR}&quot;)</span>
+<span class="s5"># best_model_path = checkpoint_dir / &quot;best_model.pth&quot;</span>
+<span class="s5"># device = &quot;cuda&quot; if torch.cuda.is_available() else &quot;cpu&quot;</span>
+<span class="s5">#</span>
+<span class="s5"># model = SuperResolution()</span>
+<span class="s5"># checkpoint = torch.load(best_model_path, map_location=device, weights_only=False)</span>
+<span class="s5"># model.load_state_dict(checkpoint['model_state_dict'])</span>
+<span class="s5"># model.to(device)</span>
+<span class="s5"># model.eval()</span>
+<span class="s5"># print(f&quot;✅ Best model loaded from {best_model_path}&quot;)</span>
+<span class="s5"># print(f&quot;📍 Using device: {device}&quot;)</span>
+<span class="s5"># print(f&quot;📊 Model trained for {checkpoint['epoch']} epochs&quot;)</span>
+<span class="s5"># print(f&quot;📈 Val Loss: {checkpoint['val_loss']:.6f}, PSNR: {checkpoint['val_psnr']:.4f} dB, SSIM: {checkpoint['val_ssim']:.4f}&quot;)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s5"># LOAD LATEST CHECKPOINT</span>
+<span class="s1">from </span><span class="s0">Helper </span><span class="s1">import </span><span class="s0">load_checkpoint_generic</span>
+
+<span class="s0">SCALE_FACTOR </span><span class="s2">= </span><span class="s6">3</span>
+<span class="s0">checkpoint_dir </span><span class="s2">= </span><span class="s0">Path</span><span class="s2">(</span><span class="s3">f&quot;./checkpoints_x</span><span class="s1">{</span><span class="s0">SCALE_FACTOR</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">device </span><span class="s2">= </span><span class="s3">&quot;cuda&quot; </span><span class="s1">if </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">cuda</span><span class="s2">.</span><span class="s0">is_available</span><span class="s2">() </span><span class="s1">else </span><span class="s3">&quot;cpu&quot;</span>
+
+<span class="s0">model </span><span class="s2">= </span><span class="s0">SuperResolution</span><span class="s2">()</span>
+<span class="s0">checkpoint </span><span class="s2">= </span><span class="s0">load_checkpoint_generic</span><span class="s2">(</span><span class="s0">str</span><span class="s2">(</span><span class="s0">checkpoint_dir</span><span class="s2">), </span><span class="s0">device</span><span class="s2">)</span>
+<span class="s1">if </span><span class="s0">checkpoint</span><span class="s2">:</span>
+    <span class="s0">model</span><span class="s2">.</span><span class="s0">load_state_dict</span><span class="s2">(</span><span class="s0">checkpoint</span><span class="s2">[</span><span class="s3">'model_state_dict'</span><span class="s2">])</span>
+<span class="s0">model</span><span class="s2">.</span><span class="s0">to</span><span class="s2">(</span><span class="s0">device</span><span class="s2">)</span>
+<span class="s0">model</span><span class="s2">.</span><span class="s0">eval</span><span class="s2">()</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;✅ Model loaded from latest checkpoint&quot;</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s5"># EVALUATE ON T91</span>
+<span class="s0">test_t91 </span><span class="s2">= </span><span class="s0">TestDataset</span><span class="s2">(</span><span class="s0">T91_DIR</span><span class="s2">, </span><span class="s0">scale_factor</span><span class="s2">=</span><span class="s0">SCALE_FACTOR</span><span class="s2">)</span>
+
+<span class="s0">psnr_lr_list </span><span class="s2">= []</span>
+<span class="s0">ssim_lr_list </span><span class="s2">= []</span>
+<span class="s0">psnr_sr_list </span><span class="s2">= []</span>
+<span class="s0">ssim_sr_list </span><span class="s2">= []</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;Evaluating T91...&quot;</span><span class="s2">)</span>
+<span class="s1">for </span><span class="s0">idx </span><span class="s1">in </span><span class="s0">range</span><span class="s2">(</span><span class="s0">len</span><span class="s2">(</span><span class="s0">test_t91</span><span class="s2">)):</span>
+    <span class="s0">lr_ycbcr</span><span class="s2">, </span><span class="s0">hr_ycbcr </span><span class="s2">= </span><span class="s0">test_t91</span><span class="s2">[</span><span class="s0">idx</span><span class="s2">]</span>
+
+    <span class="s5"># Extract Y channels</span>
+    <span class="s0">lr_y </span><span class="s2">= </span><span class="s0">lr_ycbcr</span><span class="s2">[:, :, </span><span class="s6">0</span><span class="s2">]</span>
+    <span class="s0">hr_y </span><span class="s2">= </span><span class="s0">hr_ycbcr</span><span class="s2">[:, :, </span><span class="s6">0</span><span class="s2">]</span>
+
+    <span class="s5"># Run model</span>
+    <span class="s0">lr_y_tensor </span><span class="s2">= </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">from_numpy</span><span class="s2">(</span><span class="s0">lr_y</span><span class="s2">).</span><span class="s0">unsqueeze</span><span class="s2">(</span><span class="s6">0</span><span class="s2">).</span><span class="s0">unsqueeze</span><span class="s2">(</span><span class="s6">0</span><span class="s2">).</span><span class="s0">to</span><span class="s2">(</span><span class="s0">device</span><span class="s2">)</span>
+    <span class="s1">with </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">no_grad</span><span class="s2">():</span>
+        <span class="s0">sr_y_tensor </span><span class="s2">= </span><span class="s0">model</span><span class="s2">(</span><span class="s0">lr_y_tensor</span><span class="s2">)</span>
+    <span class="s0">sr_y </span><span class="s2">= </span><span class="s0">sr_y_tensor</span><span class="s2">.</span><span class="s0">squeeze</span><span class="s2">().</span><span class="s0">cpu</span><span class="s2">().</span><span class="s0">numpy</span><span class="s2">()</span>
+
+    <span class="s5"># Calculate metrics: Original vs LowRes</span>
+    <span class="s0">psnr_lr </span><span class="s2">= </span><span class="s0">calculate_psnr</span><span class="s2">(</span><span class="s0">hr_y</span><span class="s2">, </span><span class="s0">lr_y</span><span class="s2">)</span>
+    <span class="s0">ssim_lr </span><span class="s2">= </span><span class="s0">calculate_ssim</span><span class="s2">(</span><span class="s0">hr_y</span><span class="s2">, </span><span class="s0">lr_y</span><span class="s2">)</span>
+
+    <span class="s5"># Calculate metrics: Original vs Predicted</span>
+    <span class="s0">psnr_sr </span><span class="s2">= </span><span class="s0">calculate_psnr</span><span class="s2">(</span><span class="s0">hr_y</span><span class="s2">, </span><span class="s0">sr_y</span><span class="s2">)</span>
+    <span class="s0">ssim_sr </span><span class="s2">= </span><span class="s0">calculate_ssim</span><span class="s2">(</span><span class="s0">hr_y</span><span class="s2">, </span><span class="s0">sr_y</span><span class="s2">)</span>
+
+    <span class="s0">psnr_lr_list</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">psnr_lr</span><span class="s2">)</span>
+    <span class="s0">ssim_lr_list</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">ssim_lr</span><span class="s2">)</span>
+    <span class="s0">psnr_sr_list</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">psnr_sr</span><span class="s2">)</span>
+    <span class="s0">ssim_sr_list</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">ssim_sr</span><span class="s2">)</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;</span><span class="s1">\n</span><span class="s3">📊 T91 Results:&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Original vs LowRes    - PSNR: </span><span class="s1">{</span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">psnr_lr_list</span><span class="s2">)</span><span class="s1">:</span><span class="s3">.2f</span><span class="s1">} </span><span class="s3">± </span><span class="s1">{</span><span class="s0">np</span><span class="s2">.</span><span class="s0">std</span><span class="s2">(</span><span class="s0">psnr_lr_list</span><span class="s2">)</span><span class="s1">:</span><span class="s3">.2f</span><span class="s1">} </span><span class="s3">dB&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;                      - SSIM: </span><span class="s1">{</span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">ssim_lr_list</span><span class="s2">)</span><span class="s1">:</span><span class="s3">.4f</span><span class="s1">} </span><span class="s3">± </span><span class="s1">{</span><span class="s0">np</span><span class="s2">.</span><span class="s0">std</span><span class="s2">(</span><span class="s0">ssim_lr_list</span><span class="s2">)</span><span class="s1">:</span><span class="s3">.4f</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Original vs Predicted - PSNR: </span><span class="s1">{</span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">psnr_sr_list</span><span class="s2">)</span><span class="s1">:</span><span class="s3">.2f</span><span class="s1">} </span><span class="s3">± </span><span class="s1">{</span><span class="s0">np</span><span class="s2">.</span><span class="s0">std</span><span class="s2">(</span><span class="s0">psnr_sr_list</span><span class="s2">)</span><span class="s1">:</span><span class="s3">.2f</span><span class="s1">} </span><span class="s3">dB&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;                      - SSIM: </span><span class="s1">{</span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">ssim_sr_list</span><span class="s2">)</span><span class="s1">:</span><span class="s3">.4f</span><span class="s1">} </span><span class="s3">± </span><span class="s1">{</span><span class="s0">np</span><span class="s2">.</span><span class="s0">std</span><span class="s2">(</span><span class="s0">ssim_sr_list</span><span class="s2">)</span><span class="s1">:</span><span class="s3">.4f</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s5"># EVALUATE ON SET5</span>
+<span class="s0">test_set5 </span><span class="s2">= </span><span class="s0">TestDataset</span><span class="s2">(</span><span class="s0">SET5_DIR</span><span class="s2">, </span><span class="s0">scale_factor</span><span class="s2">=</span><span class="s0">SCALE_FACTOR</span><span class="s2">)</span>
+
+<span class="s0">psnr_lr_list </span><span class="s2">= []</span>
+<span class="s0">ssim_lr_list </span><span class="s2">= []</span>
+<span class="s0">psnr_sr_list </span><span class="s2">= []</span>
+<span class="s0">ssim_sr_list </span><span class="s2">= []</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;Evaluating Set5...&quot;</span><span class="s2">)</span>
+<span class="s1">for </span><span class="s0">idx </span><span class="s1">in </span><span class="s0">range</span><span class="s2">(</span><span class="s0">len</span><span class="s2">(</span><span class="s0">test_set5</span><span class="s2">)):</span>
+    <span class="s0">lr_ycbcr</span><span class="s2">, </span><span class="s0">hr_ycbcr </span><span class="s2">= </span><span class="s0">test_set5</span><span class="s2">[</span><span class="s0">idx</span><span class="s2">]</span>
+
+    <span class="s5"># Extract Y channels</span>
+    <span class="s0">lr_y </span><span class="s2">= </span><span class="s0">lr_ycbcr</span><span class="s2">[:, :, </span><span class="s6">0</span><span class="s2">]</span>
+    <span class="s0">hr_y </span><span class="s2">= </span><span class="s0">hr_ycbcr</span><span class="s2">[:, :, </span><span class="s6">0</span><span class="s2">]</span>
+
+    <span class="s5"># Run model</span>
+    <span class="s0">lr_y_tensor </span><span class="s2">= </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">from_numpy</span><span class="s2">(</span><span class="s0">lr_y</span><span class="s2">).</span><span class="s0">unsqueeze</span><span class="s2">(</span><span class="s6">0</span><span class="s2">).</span><span class="s0">unsqueeze</span><span class="s2">(</span><span class="s6">0</span><span class="s2">).</span><span class="s0">to</span><span class="s2">(</span><span class="s0">device</span><span class="s2">)</span>
+    <span class="s1">with </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">no_grad</span><span class="s2">():</span>
+        <span class="s0">sr_y_tensor </span><span class="s2">= </span><span class="s0">model</span><span class="s2">(</span><span class="s0">lr_y_tensor</span><span class="s2">)</span>
+    <span class="s0">sr_y </span><span class="s2">= </span><span class="s0">sr_y_tensor</span><span class="s2">.</span><span class="s0">squeeze</span><span class="s2">().</span><span class="s0">cpu</span><span class="s2">().</span><span class="s0">numpy</span><span class="s2">()</span>
+
+    <span class="s5"># Calculate metrics: Original vs LowRes</span>
+    <span class="s0">psnr_lr </span><span class="s2">= </span><span class="s0">calculate_psnr</span><span class="s2">(</span><span class="s0">hr_y</span><span class="s2">, </span><span class="s0">lr_y</span><span class="s2">)</span>
+    <span class="s0">ssim_lr </span><span class="s2">= </span><span class="s0">calculate_ssim</span><span class="s2">(</span><span class="s0">hr_y</span><span class="s2">, </span><span class="s0">lr_y</span><span class="s2">)</span>
+
+    <span class="s5"># Calculate metrics: Original vs Predicted</span>
+    <span class="s0">psnr_sr </span><span class="s2">= </span><span class="s0">calculate_psnr</span><span class="s2">(</span><span class="s0">hr_y</span><span class="s2">, </span><span class="s0">sr_y</span><span class="s2">)</span>
+    <span class="s0">ssim_sr </span><span class="s2">= </span><span class="s0">calculate_ssim</span><span class="s2">(</span><span class="s0">hr_y</span><span class="s2">, </span><span class="s0">sr_y</span><span class="s2">)</span>
+
+    <span class="s0">psnr_lr_list</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">psnr_lr</span><span class="s2">)</span>
+    <span class="s0">ssim_lr_list</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">ssim_lr</span><span class="s2">)</span>
+    <span class="s0">psnr_sr_list</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">psnr_sr</span><span class="s2">)</span>
+    <span class="s0">ssim_sr_list</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">ssim_sr</span><span class="s2">)</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;</span><span class="s1">\n</span><span class="s3">📊 Set5 Results:&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Original vs LowRes    - PSNR: </span><span class="s1">{</span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">psnr_lr_list</span><span class="s2">)</span><span class="s1">:</span><span class="s3">.2f</span><span class="s1">} </span><span class="s3">± </span><span class="s1">{</span><span class="s0">np</span><span class="s2">.</span><span class="s0">std</span><span class="s2">(</span><span class="s0">psnr_lr_list</span><span class="s2">)</span><span class="s1">:</span><span class="s3">.2f</span><span class="s1">} </span><span class="s3">dB&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;                      - SSIM: </span><span class="s1">{</span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">ssim_lr_list</span><span class="s2">)</span><span class="s1">:</span><span class="s3">.4f</span><span class="s1">} </span><span class="s3">± </span><span class="s1">{</span><span class="s0">np</span><span class="s2">.</span><span class="s0">std</span><span class="s2">(</span><span class="s0">ssim_lr_list</span><span class="s2">)</span><span class="s1">:</span><span class="s3">.4f</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Original vs Predicted - PSNR: </span><span class="s1">{</span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">psnr_sr_list</span><span class="s2">)</span><span class="s1">:</span><span class="s3">.2f</span><span class="s1">} </span><span class="s3">± </span><span class="s1">{</span><span class="s0">np</span><span class="s2">.</span><span class="s0">std</span><span class="s2">(</span><span class="s0">psnr_sr_list</span><span class="s2">)</span><span class="s1">:</span><span class="s3">.2f</span><span class="s1">} </span><span class="s3">dB&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;                      - SSIM: </span><span class="s1">{</span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">ssim_sr_list</span><span class="s2">)</span><span class="s1">:</span><span class="s3">.4f</span><span class="s1">} </span><span class="s3">± </span><span class="s1">{</span><span class="s0">np</span><span class="s2">.</span><span class="s0">std</span><span class="s2">(</span><span class="s0">ssim_sr_list</span><span class="s2">)</span><span class="s1">:</span><span class="s3">.4f</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s5"># EVALUATE ON SET14</span>
+<span class="s0">test_set14 </span><span class="s2">= </span><span class="s0">TestDataset</span><span class="s2">(</span><span class="s0">SET14_DIR</span><span class="s2">, </span><span class="s0">scale_factor</span><span class="s2">=</span><span class="s0">SCALE_FACTOR</span><span class="s2">)</span>
+
+<span class="s0">psnr_lr_list </span><span class="s2">= []</span>
+<span class="s0">ssim_lr_list </span><span class="s2">= []</span>
+<span class="s0">psnr_sr_list </span><span class="s2">= []</span>
+<span class="s0">ssim_sr_list </span><span class="s2">= []</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;Evaluating Set14...&quot;</span><span class="s2">)</span>
+<span class="s1">for </span><span class="s0">idx </span><span class="s1">in </span><span class="s0">range</span><span class="s2">(</span><span class="s0">len</span><span class="s2">(</span><span class="s0">test_set14</span><span class="s2">)):</span>
+    <span class="s0">lr_ycbcr</span><span class="s2">, </span><span class="s0">hr_ycbcr </span><span class="s2">= </span><span class="s0">test_set14</span><span class="s2">[</span><span class="s0">idx</span><span class="s2">]</span>
+
+    <span class="s5"># Extract Y channels</span>
+    <span class="s0">lr_y </span><span class="s2">= </span><span class="s0">lr_ycbcr</span><span class="s2">[:, :, </span><span class="s6">0</span><span class="s2">]</span>
+    <span class="s0">hr_y </span><span class="s2">= </span><span class="s0">hr_ycbcr</span><span class="s2">[:, :, </span><span class="s6">0</span><span class="s2">]</span>
+
+    <span class="s5"># Run model</span>
+    <span class="s0">lr_y_tensor </span><span class="s2">= </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">from_numpy</span><span class="s2">(</span><span class="s0">lr_y</span><span class="s2">).</span><span class="s0">unsqueeze</span><span class="s2">(</span><span class="s6">0</span><span class="s2">).</span><span class="s0">unsqueeze</span><span class="s2">(</span><span class="s6">0</span><span class="s2">).</span><span class="s0">to</span><span class="s2">(</span><span class="s0">device</span><span class="s2">)</span>
+    <span class="s1">with </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">no_grad</span><span class="s2">():</span>
+        <span class="s0">sr_y_tensor </span><span class="s2">= </span><span class="s0">model</span><span class="s2">(</span><span class="s0">lr_y_tensor</span><span class="s2">)</span>
+    <span class="s0">sr_y </span><span class="s2">= </span><span class="s0">sr_y_tensor</span><span class="s2">.</span><span class="s0">squeeze</span><span class="s2">().</span><span class="s0">cpu</span><span class="s2">().</span><span class="s0">numpy</span><span class="s2">()</span>
+
+    <span class="s5"># Calculate metrics</span>
+    <span class="s0">psnr_lr </span><span class="s2">= </span><span class="s0">calculate_psnr</span><span class="s2">(</span><span class="s0">hr_y</span><span class="s2">, </span><span class="s0">lr_y</span><span class="s2">)</span>
+    <span class="s0">ssim_lr </span><span class="s2">= </span><span class="s0">calculate_ssim</span><span class="s2">(</span><span class="s0">hr_y</span><span class="s2">, </span><span class="s0">lr_y</span><span class="s2">)</span>
+    <span class="s0">psnr_sr </span><span class="s2">= </span><span class="s0">calculate_psnr</span><span class="s2">(</span><span class="s0">hr_y</span><span class="s2">, </span><span class="s0">sr_y</span><span class="s2">)</span>
+    <span class="s0">ssim_sr </span><span class="s2">= </span><span class="s0">calculate_ssim</span><span class="s2">(</span><span class="s0">hr_y</span><span class="s2">, </span><span class="s0">sr_y</span><span class="s2">)</span>
+
+    <span class="s0">psnr_lr_list</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">psnr_lr</span><span class="s2">)</span>
+    <span class="s0">ssim_lr_list</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">ssim_lr</span><span class="s2">)</span>
+    <span class="s0">psnr_sr_list</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">psnr_sr</span><span class="s2">)</span>
+    <span class="s0">ssim_sr_list</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">ssim_sr</span><span class="s2">)</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;</span><span class="s1">\n</span><span class="s3">📊 Set14 Results:&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Original vs LowRes    - PSNR: </span><span class="s1">{</span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">psnr_lr_list</span><span class="s2">)</span><span class="s1">:</span><span class="s3">.2f</span><span class="s1">} </span><span class="s3">± </span><span class="s1">{</span><span class="s0">np</span><span class="s2">.</span><span class="s0">std</span><span class="s2">(</span><span class="s0">psnr_lr_list</span><span class="s2">)</span><span class="s1">:</span><span class="s3">.2f</span><span class="s1">} </span><span class="s3">dB&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;                      - SSIM: </span><span class="s1">{</span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">ssim_lr_list</span><span class="s2">)</span><span class="s1">:</span><span class="s3">.4f</span><span class="s1">} </span><span class="s3">± </span><span class="s1">{</span><span class="s0">np</span><span class="s2">.</span><span class="s0">std</span><span class="s2">(</span><span class="s0">ssim_lr_list</span><span class="s2">)</span><span class="s1">:</span><span class="s3">.4f</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Original vs Predicted - PSNR: </span><span class="s1">{</span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">psnr_sr_list</span><span class="s2">)</span><span class="s1">:</span><span class="s3">.2f</span><span class="s1">} </span><span class="s3">± </span><span class="s1">{</span><span class="s0">np</span><span class="s2">.</span><span class="s0">std</span><span class="s2">(</span><span class="s0">psnr_sr_list</span><span class="s2">)</span><span class="s1">:</span><span class="s3">.2f</span><span class="s1">} </span><span class="s3">dB&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;                      - SSIM: </span><span class="s1">{</span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">ssim_sr_list</span><span class="s2">)</span><span class="s1">:</span><span class="s3">.4f</span><span class="s1">} </span><span class="s3">± </span><span class="s1">{</span><span class="s0">np</span><span class="s2">.</span><span class="s0">std</span><span class="s2">(</span><span class="s0">ssim_sr_list</span><span class="s2">)</span><span class="s1">:</span><span class="s3">.4f</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s5"># VISUALIZE SET5 WITH METRICS</span>
+<span class="s0">test_set5 </span><span class="s2">= </span><span class="s0">TestDataset</span><span class="s2">(</span><span class="s0">SET5_DIR</span><span class="s2">, </span><span class="s0">scale_factor</span><span class="s2">=</span><span class="s0">SCALE_FACTOR</span><span class="s2">)</span>
+
+<span class="s1">for </span><span class="s0">idx </span><span class="s1">in </span><span class="s0">range</span><span class="s2">(</span><span class="s0">len</span><span class="s2">(</span><span class="s0">test_set5</span><span class="s2">)):</span>
+    <span class="s0">lr_ycbcr</span><span class="s2">, </span><span class="s0">hr_ycbcr </span><span class="s2">= </span><span class="s0">test_set5</span><span class="s2">[</span><span class="s0">idx</span><span class="s2">]</span>
+    <span class="s0">filename </span><span class="s2">= </span><span class="s0">test_set5</span><span class="s2">.</span><span class="s0">get_filename</span><span class="s2">(</span><span class="s0">idx</span><span class="s2">)</span>
+
+    <span class="s5"># Extract Y channels</span>
+    <span class="s0">lr_y </span><span class="s2">= </span><span class="s0">lr_ycbcr</span><span class="s2">[:, :, </span><span class="s6">0</span><span class="s2">]</span>
+    <span class="s0">hr_y </span><span class="s2">= </span><span class="s0">hr_ycbcr</span><span class="s2">[:, :, </span><span class="s6">0</span><span class="s2">]</span>
+
+    <span class="s5"># Run model</span>
+    <span class="s0">lr_y_tensor </span><span class="s2">= </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">from_numpy</span><span class="s2">(</span><span class="s0">lr_y</span><span class="s2">).</span><span class="s0">unsqueeze</span><span class="s2">(</span><span class="s6">0</span><span class="s2">).</span><span class="s0">unsqueeze</span><span class="s2">(</span><span class="s6">0</span><span class="s2">).</span><span class="s0">to</span><span class="s2">(</span><span class="s0">device</span><span class="s2">)</span>
+    <span class="s1">with </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">no_grad</span><span class="s2">():</span>
+        <span class="s0">sr_y_tensor </span><span class="s2">= </span><span class="s0">model</span><span class="s2">(</span><span class="s0">lr_y_tensor</span><span class="s2">)</span>
+    <span class="s0">sr_y </span><span class="s2">= </span><span class="s0">sr_y_tensor</span><span class="s2">.</span><span class="s0">squeeze</span><span class="s2">().</span><span class="s0">cpu</span><span class="s2">().</span><span class="s0">numpy</span><span class="s2">()</span>
+
+    <span class="s5"># Calculate metrics</span>
+    <span class="s0">psnr_lr </span><span class="s2">= </span><span class="s0">calculate_psnr</span><span class="s2">(</span><span class="s0">hr_y</span><span class="s2">, </span><span class="s0">lr_y</span><span class="s2">)</span>
+    <span class="s0">ssim_lr </span><span class="s2">= </span><span class="s0">calculate_ssim</span><span class="s2">(</span><span class="s0">hr_y</span><span class="s2">, </span><span class="s0">lr_y</span><span class="s2">)</span>
+    <span class="s0">psnr_sr </span><span class="s2">= </span><span class="s0">calculate_psnr</span><span class="s2">(</span><span class="s0">hr_y</span><span class="s2">, </span><span class="s0">sr_y</span><span class="s2">)</span>
+    <span class="s0">ssim_sr </span><span class="s2">= </span><span class="s0">calculate_ssim</span><span class="s2">(</span><span class="s0">hr_y</span><span class="s2">, </span><span class="s0">sr_y</span><span class="s2">)</span>
+
+    <span class="s5"># Reconstruct RGB images</span>
+    <span class="s0">sr_y_uint8 </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">clip</span><span class="s2">(</span><span class="s0">sr_y </span><span class="s2">* </span><span class="s6">255.0</span><span class="s2">, </span><span class="s6">0</span><span class="s2">, </span><span class="s6">255</span><span class="s2">).</span><span class="s0">astype</span><span class="s2">(</span><span class="s0">np</span><span class="s2">.</span><span class="s0">uint8</span><span class="s2">)</span>
+    <span class="s0">sr_rgb </span><span class="s2">= </span><span class="s0">reconstruct_rgb_from_ycbcr</span><span class="s2">(</span><span class="s0">sr_y_uint8</span><span class="s2">,</span>
+                                        <span class="s2">(</span><span class="s0">lr_ycbcr</span><span class="s2">[:, :, </span><span class="s6">1</span><span class="s2">] * </span><span class="s6">255</span><span class="s2">).</span><span class="s0">astype</span><span class="s2">(</span><span class="s0">np</span><span class="s2">.</span><span class="s0">uint8</span><span class="s2">),</span>
+                                        <span class="s2">(</span><span class="s0">lr_ycbcr</span><span class="s2">[:, :, </span><span class="s6">2</span><span class="s2">] * </span><span class="s6">255</span><span class="s2">).</span><span class="s0">astype</span><span class="s2">(</span><span class="s0">np</span><span class="s2">.</span><span class="s0">uint8</span><span class="s2">))</span>
+    <span class="s0">hr_rgb </span><span class="s2">= </span><span class="s0">cv2</span><span class="s2">.</span><span class="s0">cvtColor</span><span class="s2">((</span><span class="s0">hr_ycbcr </span><span class="s2">* </span><span class="s6">255</span><span class="s2">).</span><span class="s0">astype</span><span class="s2">(</span><span class="s0">np</span><span class="s2">.</span><span class="s0">uint8</span><span class="s2">), </span><span class="s0">cv2</span><span class="s2">.</span><span class="s0">COLOR_YCrCb2RGB</span><span class="s2">)</span>
+    <span class="s0">lr_rgb </span><span class="s2">= </span><span class="s0">cv2</span><span class="s2">.</span><span class="s0">cvtColor</span><span class="s2">((</span><span class="s0">lr_ycbcr </span><span class="s2">* </span><span class="s6">255</span><span class="s2">).</span><span class="s0">astype</span><span class="s2">(</span><span class="s0">np</span><span class="s2">.</span><span class="s0">uint8</span><span class="s2">), </span><span class="s0">cv2</span><span class="s2">.</span><span class="s0">COLOR_YCrCb2RGB</span><span class="s2">)</span>
+
+    <span class="s5"># Plot</span>
+    <span class="s0">fig</span><span class="s2">, </span><span class="s0">axes </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s6">1</span><span class="s2">, </span><span class="s6">3</span><span class="s2">, </span><span class="s0">figsize</span><span class="s2">=(</span><span class="s6">18</span><span class="s2">, </span><span class="s6">6</span><span class="s2">))</span>
+
+    <span class="s0">axes</span><span class="s2">[</span><span class="s6">0</span><span class="s2">].</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">hr_rgb</span><span class="s2">)</span>
+    <span class="s0">axes</span><span class="s2">[</span><span class="s6">0</span><span class="s2">].</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">f'Original</span><span class="s1">\n{</span><span class="s0">filename</span><span class="s1">}</span><span class="s3">'</span><span class="s2">)</span>
+    <span class="s0">axes</span><span class="s2">[</span><span class="s6">0</span><span class="s2">].</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">'off'</span><span class="s2">)</span>
+
+    <span class="s0">axes</span><span class="s2">[</span><span class="s6">1</span><span class="s2">].</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">lr_rgb</span><span class="s2">)</span>
+    <span class="s0">axes</span><span class="s2">[</span><span class="s6">1</span><span class="s2">].</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">f'Low-Res</span><span class="s1">\n</span><span class="s3">PSNR: </span><span class="s1">{</span><span class="s0">psnr_lr</span><span class="s1">:</span><span class="s3">.2f</span><span class="s1">} </span><span class="s3">dB | SSIM: </span><span class="s1">{</span><span class="s0">ssim_lr</span><span class="s1">:</span><span class="s3">.4f</span><span class="s1">}</span><span class="s3">'</span><span class="s2">)</span>
+    <span class="s0">axes</span><span class="s2">[</span><span class="s6">1</span><span class="s2">].</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">'off'</span><span class="s2">)</span>
+
+    <span class="s0">axes</span><span class="s2">[</span><span class="s6">2</span><span class="s2">].</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">sr_rgb</span><span class="s2">)</span>
+    <span class="s0">axes</span><span class="s2">[</span><span class="s6">2</span><span class="s2">].</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">f'Predicted</span><span class="s1">\n</span><span class="s3">PSNR: </span><span class="s1">{</span><span class="s0">psnr_sr</span><span class="s1">:</span><span class="s3">.2f</span><span class="s1">} </span><span class="s3">dB | SSIM: </span><span class="s1">{</span><span class="s0">ssim_sr</span><span class="s1">:</span><span class="s3">.4f</span><span class="s1">}</span><span class="s3">'</span><span class="s2">)</span>
+    <span class="s0">axes</span><span class="s2">[</span><span class="s6">2</span><span class="s2">].</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">'off'</span><span class="s2">)</span>
+
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s5"># VISUALIZE SET14 WITH METRICS</span>
+<span class="s0">test_set14 </span><span class="s2">= </span><span class="s0">TestDataset</span><span class="s2">(</span><span class="s0">SET14_DIR</span><span class="s2">, </span><span class="s0">scale_factor</span><span class="s2">=</span><span class="s0">SCALE_FACTOR</span><span class="s2">)</span>
+
+<span class="s1">for </span><span class="s0">idx </span><span class="s1">in </span><span class="s0">range</span><span class="s2">(</span><span class="s0">len</span><span class="s2">(</span><span class="s0">test_set14</span><span class="s2">)):</span>
+    <span class="s0">lr_ycbcr</span><span class="s2">, </span><span class="s0">hr_ycbcr </span><span class="s2">= </span><span class="s0">test_set14</span><span class="s2">[</span><span class="s0">idx</span><span class="s2">]</span>
+    <span class="s0">filename </span><span class="s2">= </span><span class="s0">test_set14</span><span class="s2">.</span><span class="s0">get_filename</span><span class="s2">(</span><span class="s0">idx</span><span class="s2">)</span>
+
+    <span class="s5"># Extract Y channels</span>
+    <span class="s0">lr_y </span><span class="s2">= </span><span class="s0">lr_ycbcr</span><span class="s2">[:, :, </span><span class="s6">0</span><span class="s2">]</span>
+    <span class="s0">hr_y </span><span class="s2">= </span><span class="s0">hr_ycbcr</span><span class="s2">[:, :, </span><span class="s6">0</span><span class="s2">]</span>
+
+    <span class="s5"># Run model</span>
+    <span class="s0">lr_y_tensor </span><span class="s2">= </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">from_numpy</span><span class="s2">(</span><span class="s0">lr_y</span><span class="s2">).</span><span class="s0">unsqueeze</span><span class="s2">(</span><span class="s6">0</span><span class="s2">).</span><span class="s0">unsqueeze</span><span class="s2">(</span><span class="s6">0</span><span class="s2">).</span><span class="s0">to</span><span class="s2">(</span><span class="s0">device</span><span class="s2">)</span>
+    <span class="s1">with </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">no_grad</span><span class="s2">():</span>
+        <span class="s0">sr_y_tensor </span><span class="s2">= </span><span class="s0">model</span><span class="s2">(</span><span class="s0">lr_y_tensor</span><span class="s2">)</span>
+    <span class="s0">sr_y </span><span class="s2">= </span><span class="s0">sr_y_tensor</span><span class="s2">.</span><span class="s0">squeeze</span><span class="s2">().</span><span class="s0">cpu</span><span class="s2">().</span><span class="s0">numpy</span><span class="s2">()</span>
+
+    <span class="s5"># Calculate metrics</span>
+    <span class="s0">psnr_lr </span><span class="s2">= </span><span class="s0">calculate_psnr</span><span class="s2">(</span><span class="s0">hr_y</span><span class="s2">, </span><span class="s0">lr_y</span><span class="s2">)</span>
+    <span class="s0">ssim_lr </span><span class="s2">= </span><span class="s0">calculate_ssim</span><span class="s2">(</span><span class="s0">hr_y</span><span class="s2">, </span><span class="s0">lr_y</span><span class="s2">)</span>
+    <span class="s0">psnr_sr </span><span class="s2">= </span><span class="s0">calculate_psnr</span><span class="s2">(</span><span class="s0">hr_y</span><span class="s2">, </span><span class="s0">sr_y</span><span class="s2">)</span>
+    <span class="s0">ssim_sr </span><span class="s2">= </span><span class="s0">calculate_ssim</span><span class="s2">(</span><span class="s0">hr_y</span><span class="s2">, </span><span class="s0">sr_y</span><span class="s2">)</span>
+
+    <span class="s5"># Reconstruct RGB images</span>
+    <span class="s0">sr_y_uint8 </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">clip</span><span class="s2">(</span><span class="s0">sr_y </span><span class="s2">* </span><span class="s6">255.0</span><span class="s2">, </span><span class="s6">0</span><span class="s2">, </span><span class="s6">255</span><span class="s2">).</span><span class="s0">astype</span><span class="s2">(</span><span class="s0">np</span><span class="s2">.</span><span class="s0">uint8</span><span class="s2">)</span>
+    <span class="s0">sr_rgb </span><span class="s2">= </span><span class="s0">reconstruct_rgb_from_ycbcr</span><span class="s2">(</span><span class="s0">sr_y_uint8</span><span class="s2">,</span>
+                                        <span class="s2">(</span><span class="s0">lr_ycbcr</span><span class="s2">[:, :, </span><span class="s6">1</span><span class="s2">] * </span><span class="s6">255</span><span class="s2">).</span><span class="s0">astype</span><span class="s2">(</span><span class="s0">np</span><span class="s2">.</span><span class="s0">uint8</span><span class="s2">),</span>
+                                        <span class="s2">(</span><span class="s0">lr_ycbcr</span><span class="s2">[:, :, </span><span class="s6">2</span><span class="s2">] * </span><span class="s6">255</span><span class="s2">).</span><span class="s0">astype</span><span class="s2">(</span><span class="s0">np</span><span class="s2">.</span><span class="s0">uint8</span><span class="s2">))</span>
+    <span class="s0">hr_rgb </span><span class="s2">= </span><span class="s0">cv2</span><span class="s2">.</span><span class="s0">cvtColor</span><span class="s2">((</span><span class="s0">hr_ycbcr </span><span class="s2">* </span><span class="s6">255</span><span class="s2">).</span><span class="s0">astype</span><span class="s2">(</span><span class="s0">np</span><span class="s2">.</span><span class="s0">uint8</span><span class="s2">), </span><span class="s0">cv2</span><span class="s2">.</span><span class="s0">COLOR_YCrCb2RGB</span><span class="s2">)</span>
+    <span class="s0">lr_rgb </span><span class="s2">= </span><span class="s0">cv2</span><span class="s2">.</span><span class="s0">cvtColor</span><span class="s2">((</span><span class="s0">lr_ycbcr </span><span class="s2">* </span><span class="s6">255</span><span class="s2">).</span><span class="s0">astype</span><span class="s2">(</span><span class="s0">np</span><span class="s2">.</span><span class="s0">uint8</span><span class="s2">), </span><span class="s0">cv2</span><span class="s2">.</span><span class="s0">COLOR_YCrCb2RGB</span><span class="s2">)</span>
+
+    <span class="s5"># Plot</span>
+    <span class="s0">fig</span><span class="s2">, </span><span class="s0">axes </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s6">1</span><span class="s2">, </span><span class="s6">3</span><span class="s2">, </span><span class="s0">figsize</span><span class="s2">=(</span><span class="s6">18</span><span class="s2">, </span><span class="s6">6</span><span class="s2">))</span>
+
+    <span class="s0">axes</span><span class="s2">[</span><span class="s6">0</span><span class="s2">].</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">hr_rgb</span><span class="s2">)</span>
+    <span class="s0">axes</span><span class="s2">[</span><span class="s6">0</span><span class="s2">].</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">f'Original</span><span class="s1">\n{</span><span class="s0">filename</span><span class="s1">}</span><span class="s3">'</span><span class="s2">)</span>
+    <span class="s0">axes</span><span class="s2">[</span><span class="s6">0</span><span class="s2">].</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">'off'</span><span class="s2">)</span>
+
+    <span class="s0">axes</span><span class="s2">[</span><span class="s6">1</span><span class="s2">].</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">lr_rgb</span><span class="s2">)</span>
+    <span class="s0">axes</span><span class="s2">[</span><span class="s6">1</span><span class="s2">].</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">f'Low-Res</span><span class="s1">\n</span><span class="s3">PSNR: </span><span class="s1">{</span><span class="s0">psnr_lr</span><span class="s1">:</span><span class="s3">.2f</span><span class="s1">} </span><span class="s3">dB | SSIM: </span><span class="s1">{</span><span class="s0">ssim_lr</span><span class="s1">:</span><span class="s3">.4f</span><span class="s1">}</span><span class="s3">'</span><span class="s2">)</span>
+    <span class="s0">axes</span><span class="s2">[</span><span class="s6">1</span><span class="s2">].</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">'off'</span><span class="s2">)</span>
+
+    <span class="s0">axes</span><span class="s2">[</span><span class="s6">2</span><span class="s2">].</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">sr_rgb</span><span class="s2">)</span>
+    <span class="s0">axes</span><span class="s2">[</span><span class="s6">2</span><span class="s2">].</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">f'Predicted</span><span class="s1">\n</span><span class="s3">PSNR: </span><span class="s1">{</span><span class="s0">psnr_sr</span><span class="s1">:</span><span class="s3">.2f</span><span class="s1">} </span><span class="s3">dB | SSIM: </span><span class="s1">{</span><span class="s0">ssim_sr</span><span class="s1">:</span><span class="s3">.4f</span><span class="s1">}</span><span class="s3">'</span><span class="s2">)</span>
+    <span class="s0">axes</span><span class="s2">[</span><span class="s6">2</span><span class="s2">].</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">'off'</span><span class="s2">)</span>
+
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s5"># SHOW DETAILED CROP FOR SPECIFIC IMAGE</span>
+<span class="s5"># You can change the dataset and idx to examine different images</span>
+<span class="s0">test_dataset </span><span class="s2">= </span><span class="s0">TestDataset</span><span class="s2">(</span><span class="s0">SET5_DIR</span><span class="s2">, </span><span class="s0">scale_factor</span><span class="s2">=</span><span class="s0">SCALE_FACTOR</span><span class="s2">)  </span><span class="s5"># Change to SET14_DIR or T91_DIR</span>
+<span class="s0">idx </span><span class="s2">= </span><span class="s6">2  </span><span class="s5"># Change to see different images</span>
+<span class="s0">crop_y</span><span class="s2">, </span><span class="s0">crop_x </span><span class="s2">= </span><span class="s6">50</span><span class="s2">, </span><span class="s6">50  </span><span class="s5"># Top-left corner of crop</span>
+<span class="s0">crop_size </span><span class="s2">= </span><span class="s6">100  </span><span class="s5"># Size of crop</span>
+
+<span class="s0">lr_ycbcr</span><span class="s2">, </span><span class="s0">hr_ycbcr </span><span class="s2">= </span><span class="s0">test_dataset</span><span class="s2">[</span><span class="s0">idx</span><span class="s2">]</span>
+<span class="s0">filename </span><span class="s2">= </span><span class="s0">test_dataset</span><span class="s2">.</span><span class="s0">get_filename</span><span class="s2">(</span><span class="s0">idx</span><span class="s2">)</span>
+
+<span class="s5"># Process image</span>
+<span class="s0">lr_y </span><span class="s2">= </span><span class="s0">lr_ycbcr</span><span class="s2">[:, :, </span><span class="s6">0</span><span class="s2">]</span>
+<span class="s0">hr_y </span><span class="s2">= </span><span class="s0">hr_ycbcr</span><span class="s2">[:, :, </span><span class="s6">0</span><span class="s2">]</span>
+<span class="s0">lr_y_tensor </span><span class="s2">= </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">from_numpy</span><span class="s2">(</span><span class="s0">lr_y</span><span class="s2">).</span><span class="s0">unsqueeze</span><span class="s2">(</span><span class="s6">0</span><span class="s2">).</span><span class="s0">unsqueeze</span><span class="s2">(</span><span class="s6">0</span><span class="s2">).</span><span class="s0">to</span><span class="s2">(</span><span class="s0">device</span><span class="s2">)</span>
+<span class="s1">with </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">no_grad</span><span class="s2">():</span>
+    <span class="s0">sr_y_tensor </span><span class="s2">= </span><span class="s0">model</span><span class="s2">(</span><span class="s0">lr_y_tensor</span><span class="s2">)</span>
+<span class="s0">sr_y </span><span class="s2">= </span><span class="s0">sr_y_tensor</span><span class="s2">.</span><span class="s0">squeeze</span><span class="s2">().</span><span class="s0">cpu</span><span class="s2">().</span><span class="s0">numpy</span><span class="s2">()</span>
+
+<span class="s5"># Calculate metrics</span>
+<span class="s0">psnr_lr </span><span class="s2">= </span><span class="s0">calculate_psnr</span><span class="s2">(</span><span class="s0">hr_y</span><span class="s2">, </span><span class="s0">lr_y</span><span class="s2">)</span>
+<span class="s0">ssim_lr </span><span class="s2">= </span><span class="s0">calculate_ssim</span><span class="s2">(</span><span class="s0">hr_y</span><span class="s2">, </span><span class="s0">lr_y</span><span class="s2">)</span>
+<span class="s0">psnr_sr </span><span class="s2">= </span><span class="s0">calculate_psnr</span><span class="s2">(</span><span class="s0">hr_y</span><span class="s2">, </span><span class="s0">sr_y</span><span class="s2">)</span>
+<span class="s0">ssim_sr </span><span class="s2">= </span><span class="s0">calculate_ssim</span><span class="s2">(</span><span class="s0">hr_y</span><span class="s2">, </span><span class="s0">sr_y</span><span class="s2">)</span>
+
+<span class="s5"># Reconstruct RGB</span>
+<span class="s0">sr_y_uint8 </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">clip</span><span class="s2">(</span><span class="s0">sr_y </span><span class="s2">* </span><span class="s6">255.0</span><span class="s2">, </span><span class="s6">0</span><span class="s2">, </span><span class="s6">255</span><span class="s2">).</span><span class="s0">astype</span><span class="s2">(</span><span class="s0">np</span><span class="s2">.</span><span class="s0">uint8</span><span class="s2">)</span>
+<span class="s0">sr_rgb </span><span class="s2">= </span><span class="s0">reconstruct_rgb_from_ycbcr</span><span class="s2">(</span><span class="s0">sr_y_uint8</span><span class="s2">,</span>
+                                    <span class="s2">(</span><span class="s0">lr_ycbcr</span><span class="s2">[:, :, </span><span class="s6">1</span><span class="s2">] * </span><span class="s6">255</span><span class="s2">).</span><span class="s0">astype</span><span class="s2">(</span><span class="s0">np</span><span class="s2">.</span><span class="s0">uint8</span><span class="s2">),</span>
+                                    <span class="s2">(</span><span class="s0">lr_ycbcr</span><span class="s2">[:, :, </span><span class="s6">2</span><span class="s2">] * </span><span class="s6">255</span><span class="s2">).</span><span class="s0">astype</span><span class="s2">(</span><span class="s0">np</span><span class="s2">.</span><span class="s0">uint8</span><span class="s2">))</span>
+<span class="s0">hr_rgb </span><span class="s2">= </span><span class="s0">cv2</span><span class="s2">.</span><span class="s0">cvtColor</span><span class="s2">((</span><span class="s0">hr_ycbcr </span><span class="s2">* </span><span class="s6">255</span><span class="s2">).</span><span class="s0">astype</span><span class="s2">(</span><span class="s0">np</span><span class="s2">.</span><span class="s0">uint8</span><span class="s2">), </span><span class="s0">cv2</span><span class="s2">.</span><span class="s0">COLOR_YCrCb2RGB</span><span class="s2">)</span>
+<span class="s0">lr_rgb </span><span class="s2">= </span><span class="s0">cv2</span><span class="s2">.</span><span class="s0">cvtColor</span><span class="s2">((</span><span class="s0">lr_ycbcr </span><span class="s2">* </span><span class="s6">255</span><span class="s2">).</span><span class="s0">astype</span><span class="s2">(</span><span class="s0">np</span><span class="s2">.</span><span class="s0">uint8</span><span class="s2">), </span><span class="s0">cv2</span><span class="s2">.</span><span class="s0">COLOR_YCrCb2RGB</span><span class="s2">)</span>
+
+<span class="s5"># Extract crops</span>
+<span class="s0">hr_crop </span><span class="s2">= </span><span class="s0">hr_rgb</span><span class="s2">[</span><span class="s0">crop_y</span><span class="s2">:</span><span class="s0">crop_y</span><span class="s2">+</span><span class="s0">crop_size</span><span class="s2">, </span><span class="s0">crop_x</span><span class="s2">:</span><span class="s0">crop_x</span><span class="s2">+</span><span class="s0">crop_size</span><span class="s2">]</span>
+<span class="s0">lr_crop </span><span class="s2">= </span><span class="s0">lr_rgb</span><span class="s2">[</span><span class="s0">crop_y</span><span class="s2">:</span><span class="s0">crop_y</span><span class="s2">+</span><span class="s0">crop_size</span><span class="s2">, </span><span class="s0">crop_x</span><span class="s2">:</span><span class="s0">crop_x</span><span class="s2">+</span><span class="s0">crop_size</span><span class="s2">]</span>
+<span class="s0">sr_crop </span><span class="s2">= </span><span class="s0">sr_rgb</span><span class="s2">[</span><span class="s0">crop_y</span><span class="s2">:</span><span class="s0">crop_y</span><span class="s2">+</span><span class="s0">crop_size</span><span class="s2">, </span><span class="s0">crop_x</span><span class="s2">:</span><span class="s0">crop_x</span><span class="s2">+</span><span class="s0">crop_size</span><span class="s2">]</span>
+
+<span class="s5"># Plot full images with crop region highlighted</span>
+<span class="s0">fig</span><span class="s2">, </span><span class="s0">axes </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s6">1</span><span class="s2">, </span><span class="s6">3</span><span class="s2">, </span><span class="s0">figsize</span><span class="s2">=(</span><span class="s6">18</span><span class="s2">, </span><span class="s6">6</span><span class="s2">))</span>
+<span class="s0">axes</span><span class="s2">[</span><span class="s6">0</span><span class="s2">].</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">hr_rgb</span><span class="s2">)</span>
+<span class="s0">axes</span><span class="s2">[</span><span class="s6">0</span><span class="s2">].</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">f'Original</span><span class="s1">\n{</span><span class="s0">filename</span><span class="s1">}</span><span class="s3">'</span><span class="s2">)</span>
+<span class="s0">axes</span><span class="s2">[</span><span class="s6">0</span><span class="s2">].</span><span class="s0">add_patch</span><span class="s2">(</span><span class="s0">plt</span><span class="s2">.</span><span class="s0">Rectangle</span><span class="s2">((</span><span class="s0">crop_x</span><span class="s2">, </span><span class="s0">crop_y</span><span class="s2">), </span><span class="s0">crop_size</span><span class="s2">, </span><span class="s0">crop_size</span><span class="s2">,</span>
+                                <span class="s0">fill</span><span class="s2">=</span><span class="s1">False</span><span class="s2">, </span><span class="s0">edgecolor</span><span class="s2">=</span><span class="s3">'red'</span><span class="s2">, </span><span class="s0">linewidth</span><span class="s2">=</span><span class="s6">2</span><span class="s2">))</span>
+<span class="s0">axes</span><span class="s2">[</span><span class="s6">0</span><span class="s2">].</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">'off'</span><span class="s2">)</span>
+
+<span class="s0">axes</span><span class="s2">[</span><span class="s6">1</span><span class="s2">].</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">lr_rgb</span><span class="s2">)</span>
+<span class="s0">axes</span><span class="s2">[</span><span class="s6">1</span><span class="s2">].</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">f'Low-Res</span><span class="s1">\n</span><span class="s3">PSNR: </span><span class="s1">{</span><span class="s0">psnr_lr</span><span class="s1">:</span><span class="s3">.2f</span><span class="s1">} </span><span class="s3">dB | SSIM: </span><span class="s1">{</span><span class="s0">ssim_lr</span><span class="s1">:</span><span class="s3">.4f</span><span class="s1">}</span><span class="s3">'</span><span class="s2">)</span>
+<span class="s0">axes</span><span class="s2">[</span><span class="s6">1</span><span class="s2">].</span><span class="s0">add_patch</span><span class="s2">(</span><span class="s0">plt</span><span class="s2">.</span><span class="s0">Rectangle</span><span class="s2">((</span><span class="s0">crop_x</span><span class="s2">, </span><span class="s0">crop_y</span><span class="s2">), </span><span class="s0">crop_size</span><span class="s2">, </span><span class="s0">crop_size</span><span class="s2">,</span>
+                                <span class="s0">fill</span><span class="s2">=</span><span class="s1">False</span><span class="s2">, </span><span class="s0">edgecolor</span><span class="s2">=</span><span class="s3">'red'</span><span class="s2">, </span><span class="s0">linewidth</span><span class="s2">=</span><span class="s6">2</span><span class="s2">))</span>
+<span class="s0">axes</span><span class="s2">[</span><span class="s6">1</span><span class="s2">].</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">'off'</span><span class="s2">)</span>
+
+<span class="s0">axes</span><span class="s2">[</span><span class="s6">2</span><span class="s2">].</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">sr_rgb</span><span class="s2">)</span>
+<span class="s0">axes</span><span class="s2">[</span><span class="s6">2</span><span class="s2">].</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">f'Predicted</span><span class="s1">\n</span><span class="s3">PSNR: </span><span class="s1">{</span><span class="s0">psnr_sr</span><span class="s1">:</span><span class="s3">.2f</span><span class="s1">} </span><span class="s3">dB | SSIM: </span><span class="s1">{</span><span class="s0">ssim_sr</span><span class="s1">:</span><span class="s3">.4f</span><span class="s1">}</span><span class="s3">'</span><span class="s2">)</span>
+<span class="s0">axes</span><span class="s2">[</span><span class="s6">2</span><span class="s2">].</span><span class="s0">add_patch</span><span class="s2">(</span><span class="s0">plt</span><span class="s2">.</span><span class="s0">Rectangle</span><span class="s2">((</span><span class="s0">crop_x</span><span class="s2">, </span><span class="s0">crop_y</span><span class="s2">), </span><span class="s0">crop_size</span><span class="s2">, </span><span class="s0">crop_size</span><span class="s2">,</span>
+                                <span class="s0">fill</span><span class="s2">=</span><span class="s1">False</span><span class="s2">, </span><span class="s0">edgecolor</span><span class="s2">=</span><span class="s3">'red'</span><span class="s2">, </span><span class="s0">linewidth</span><span class="s2">=</span><span class="s6">2</span><span class="s2">))</span>
+<span class="s0">axes</span><span class="s2">[</span><span class="s6">2</span><span class="s2">].</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">'off'</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span>
+
+<span class="s5"># Plot crops</span>
+<span class="s0">fig</span><span class="s2">, </span><span class="s0">axes </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s6">1</span><span class="s2">, </span><span class="s6">3</span><span class="s2">, </span><span class="s0">figsize</span><span class="s2">=(</span><span class="s6">18</span><span class="s2">, </span><span class="s6">6</span><span class="s2">))</span>
+<span class="s0">axes</span><span class="s2">[</span><span class="s6">0</span><span class="s2">].</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">hr_crop</span><span class="s2">)</span>
+<span class="s0">axes</span><span class="s2">[</span><span class="s6">0</span><span class="s2">].</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">'Original (Crop)'</span><span class="s2">)</span>
+<span class="s0">axes</span><span class="s2">[</span><span class="s6">0</span><span class="s2">].</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">'off'</span><span class="s2">)</span>
+
+<span class="s0">axes</span><span class="s2">[</span><span class="s6">1</span><span class="s2">].</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">lr_crop</span><span class="s2">)</span>
+<span class="s0">axes</span><span class="s2">[</span><span class="s6">1</span><span class="s2">].</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">'Low-Res (Crop)'</span><span class="s2">)</span>
+<span class="s0">axes</span><span class="s2">[</span><span class="s6">1</span><span class="s2">].</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">'off'</span><span class="s2">)</span>
+
+<span class="s0">axes</span><span class="s2">[</span><span class="s6">2</span><span class="s2">].</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">sr_crop</span><span class="s2">)</span>
+<span class="s0">axes</span><span class="s2">[</span><span class="s6">2</span><span class="s2">].</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">'Predicted (Crop)'</span><span class="s2">)</span>
+<span class="s0">axes</span><span class="s2">[</span><span class="s6">2</span><span class="s2">].</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">'off'</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s5"># SUMMARY TABLE OF ALL RESULTS</span>
+<span class="s1">import </span><span class="s0">pandas </span><span class="s1">as </span><span class="s0">pd</span>
+
+<span class="s5"># Store results for each dataset</span>
+<span class="s0">results </span><span class="s2">= []</span>
+
+<span class="s1">for </span><span class="s0">dataset_name</span><span class="s2">, </span><span class="s0">dataset_dir </span><span class="s1">in </span><span class="s2">[(</span><span class="s3">&quot;T91&quot;</span><span class="s2">, </span><span class="s0">T91_DIR</span><span class="s2">), (</span><span class="s3">&quot;Set5&quot;</span><span class="s2">, </span><span class="s0">SET5_DIR</span><span class="s2">), (</span><span class="s3">&quot;Set14&quot;</span><span class="s2">, </span><span class="s0">SET14_DIR</span><span class="s2">)]:</span>
+    <span class="s0">test_dataset </span><span class="s2">= </span><span class="s0">TestDataset</span><span class="s2">(</span><span class="s0">dataset_dir</span><span class="s2">, </span><span class="s0">scale_factor</span><span class="s2">=</span><span class="s0">SCALE_FACTOR</span><span class="s2">)</span>
+
+    <span class="s0">psnr_lr_list </span><span class="s2">= []</span>
+    <span class="s0">ssim_lr_list </span><span class="s2">= []</span>
+    <span class="s0">psnr_sr_list </span><span class="s2">= []</span>
+    <span class="s0">ssim_sr_list </span><span class="s2">= []</span>
+
+    <span class="s1">for </span><span class="s0">idx </span><span class="s1">in </span><span class="s0">range</span><span class="s2">(</span><span class="s0">len</span><span class="s2">(</span><span class="s0">test_dataset</span><span class="s2">)):</span>
+        <span class="s0">lr_ycbcr</span><span class="s2">, </span><span class="s0">hr_ycbcr </span><span class="s2">= </span><span class="s0">test_dataset</span><span class="s2">[</span><span class="s0">idx</span><span class="s2">]</span>
+
+        <span class="s0">lr_y </span><span class="s2">= </span><span class="s0">lr_ycbcr</span><span class="s2">[:, :, </span><span class="s6">0</span><span class="s2">]</span>
+        <span class="s0">hr_y </span><span class="s2">= </span><span class="s0">hr_ycbcr</span><span class="s2">[:, :, </span><span class="s6">0</span><span class="s2">]</span>
+
+        <span class="s0">lr_y_tensor </span><span class="s2">= </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">from_numpy</span><span class="s2">(</span><span class="s0">lr_y</span><span class="s2">).</span><span class="s0">unsqueeze</span><span class="s2">(</span><span class="s6">0</span><span class="s2">).</span><span class="s0">unsqueeze</span><span class="s2">(</span><span class="s6">0</span><span class="s2">).</span><span class="s0">to</span><span class="s2">(</span><span class="s0">device</span><span class="s2">)</span>
+        <span class="s1">with </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">no_grad</span><span class="s2">():</span>
+            <span class="s0">sr_y_tensor </span><span class="s2">= </span><span class="s0">model</span><span class="s2">(</span><span class="s0">lr_y_tensor</span><span class="s2">)</span>
+        <span class="s0">sr_y </span><span class="s2">= </span><span class="s0">sr_y_tensor</span><span class="s2">.</span><span class="s0">squeeze</span><span class="s2">().</span><span class="s0">cpu</span><span class="s2">().</span><span class="s0">numpy</span><span class="s2">()</span>
+
+        <span class="s0">psnr_lr_list</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">calculate_psnr</span><span class="s2">(</span><span class="s0">hr_y</span><span class="s2">, </span><span class="s0">lr_y</span><span class="s2">))</span>
+        <span class="s0">ssim_lr_list</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">calculate_ssim</span><span class="s2">(</span><span class="s0">hr_y</span><span class="s2">, </span><span class="s0">lr_y</span><span class="s2">))</span>
+        <span class="s0">psnr_sr_list</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">calculate_psnr</span><span class="s2">(</span><span class="s0">hr_y</span><span class="s2">, </span><span class="s0">sr_y</span><span class="s2">))</span>
+        <span class="s0">ssim_sr_list</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">calculate_ssim</span><span class="s2">(</span><span class="s0">hr_y</span><span class="s2">, </span><span class="s0">sr_y</span><span class="s2">))</span>
+
+    <span class="s0">results</span><span class="s2">.</span><span class="s0">append</span><span class="s2">({</span>
+        <span class="s3">'Dataset'</span><span class="s2">: </span><span class="s0">dataset_name</span><span class="s2">,</span>
+        <span class="s3">'PSNR_LR_Mean'</span><span class="s2">: </span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">psnr_lr_list</span><span class="s2">),</span>
+        <span class="s3">'PSNR_LR_Std'</span><span class="s2">: </span><span class="s0">np</span><span class="s2">.</span><span class="s0">std</span><span class="s2">(</span><span class="s0">psnr_lr_list</span><span class="s2">),</span>
+        <span class="s3">'SSIM_LR_Mean'</span><span class="s2">: </span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">ssim_lr_list</span><span class="s2">),</span>
+        <span class="s3">'SSIM_LR_Std'</span><span class="s2">: </span><span class="s0">np</span><span class="s2">.</span><span class="s0">std</span><span class="s2">(</span><span class="s0">ssim_lr_list</span><span class="s2">),</span>
+        <span class="s3">'PSNR_SR_Mean'</span><span class="s2">: </span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">psnr_sr_list</span><span class="s2">),</span>
+        <span class="s3">'PSNR_SR_Std'</span><span class="s2">: </span><span class="s0">np</span><span class="s2">.</span><span class="s0">std</span><span class="s2">(</span><span class="s0">psnr_sr_list</span><span class="s2">),</span>
+        <span class="s3">'SSIM_SR_Mean'</span><span class="s2">: </span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">ssim_sr_list</span><span class="s2">),</span>
+        <span class="s3">'SSIM_SR_Std'</span><span class="s2">: </span><span class="s0">np</span><span class="s2">.</span><span class="s0">std</span><span class="s2">(</span><span class="s0">ssim_sr_list</span><span class="s2">),</span>
+    <span class="s2">})</span>
+
+<span class="s5"># Create DataFrame</span>
+<span class="s0">df </span><span class="s2">= </span><span class="s0">pd</span><span class="s2">.</span><span class="s0">DataFrame</span><span class="s2">(</span><span class="s0">results</span><span class="s2">)</span>
+
+<span class="s5"># Display with nice formatting</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;</span><span class="s1">\n</span><span class="s3">&quot; </span><span class="s2">+ </span><span class="s3">&quot;=&quot;</span><span class="s2">*</span><span class="s6">80</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;📊 SUMMARY OF RESULTS - Super-Resolution Model&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;=&quot;</span><span class="s2">*</span><span class="s6">80</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;</span><span class="s1">\n</span><span class="s3">Original vs Low-Res:&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;-&quot;</span><span class="s2">*</span><span class="s6">80</span><span class="s2">)</span>
+<span class="s1">for </span><span class="s0">_</span><span class="s2">, </span><span class="s0">row </span><span class="s1">in </span><span class="s0">df</span><span class="s2">.</span><span class="s0">iterrows</span><span class="s2">():</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;</span><span class="s1">{</span><span class="s0">row</span><span class="s2">[</span><span class="s3">'Dataset'</span><span class="s2">]</span><span class="s1">:</span><span class="s3">6s</span><span class="s1">} </span><span class="s3">| PSNR: </span><span class="s1">{</span><span class="s0">row</span><span class="s2">[</span><span class="s3">'PSNR_LR_Mean'</span><span class="s2">]</span><span class="s1">:</span><span class="s3">6.2f</span><span class="s1">} </span><span class="s3">± </span><span class="s1">{</span><span class="s0">row</span><span class="s2">[</span><span class="s3">'PSNR_LR_Std'</span><span class="s2">]</span><span class="s1">:</span><span class="s3">5.2f</span><span class="s1">} </span><span class="s3">dB | SSIM: </span><span class="s1">{</span><span class="s0">row</span><span class="s2">[</span><span class="s3">'SSIM_LR_Mean'</span><span class="s2">]</span><span class="s1">:</span><span class="s3">.4f</span><span class="s1">} </span><span class="s3">± </span><span class="s1">{</span><span class="s0">row</span><span class="s2">[</span><span class="s3">'SSIM_LR_Std'</span><span class="s2">]</span><span class="s1">:</span><span class="s3">.4f</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;</span><span class="s1">\n</span><span class="s3">Original vs Predicted:&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;-&quot;</span><span class="s2">*</span><span class="s6">80</span><span class="s2">)</span>
+<span class="s1">for </span><span class="s0">_</span><span class="s2">, </span><span class="s0">row </span><span class="s1">in </span><span class="s0">df</span><span class="s2">.</span><span class="s0">iterrows</span><span class="s2">():</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;</span><span class="s1">{</span><span class="s0">row</span><span class="s2">[</span><span class="s3">'Dataset'</span><span class="s2">]</span><span class="s1">:</span><span class="s3">6s</span><span class="s1">} </span><span class="s3">| PSNR: </span><span class="s1">{</span><span class="s0">row</span><span class="s2">[</span><span class="s3">'PSNR_SR_Mean'</span><span class="s2">]</span><span class="s1">:</span><span class="s3">6.2f</span><span class="s1">} </span><span class="s3">± </span><span class="s1">{</span><span class="s0">row</span><span class="s2">[</span><span class="s3">'PSNR_SR_Std'</span><span class="s2">]</span><span class="s1">:</span><span class="s3">5.2f</span><span class="s1">} </span><span class="s3">dB | SSIM: </span><span class="s1">{</span><span class="s0">row</span><span class="s2">[</span><span class="s3">'SSIM_SR_Mean'</span><span class="s2">]</span><span class="s1">:</span><span class="s3">.4f</span><span class="s1">} </span><span class="s3">± </span><span class="s1">{</span><span class="s0">row</span><span class="s2">[</span><span class="s3">'SSIM_SR_Std'</span><span class="s2">]</span><span class="s1">:</span><span class="s3">.4f</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;=&quot;</span><span class="s2">*</span><span class="s6">80</span><span class="s2">)</span>
+
+<span class="s5"># Display as table</span>
+<span class="s0">display</span><span class="s2">(</span><span class="s0">df</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s1">import </span><span class="s0">matplotlib</span><span class="s2">.</span><span class="s0">pyplot </span><span class="s1">as </span><span class="s0">plt</span>
+
+<span class="s5"># Get filters from first conv layer</span>
+<span class="s0">filters </span><span class="s2">= </span><span class="s0">model</span><span class="s2">.</span><span class="s0">conv1</span><span class="s2">.</span><span class="s0">weight</span><span class="s2">.</span><span class="s0">data</span><span class="s2">.</span><span class="s0">cpu</span><span class="s2">().</span><span class="s0">numpy</span><span class="s2">()  </span><span class="s5"># shape: (64, 1, 9, 9)</span>
+
+<span class="s5"># Create grid (8 columns)</span>
+<span class="s0">fig</span><span class="s2">, </span><span class="s0">axes </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s6">8</span><span class="s2">, </span><span class="s6">8</span><span class="s2">, </span><span class="s0">figsize</span><span class="s2">=(</span><span class="s6">12</span><span class="s2">, </span><span class="s6">12</span><span class="s2">))</span>
+
+<span class="s1">for </span><span class="s0">i</span><span class="s2">, </span><span class="s0">ax </span><span class="s1">in </span><span class="s0">enumerate</span><span class="s2">(</span><span class="s0">axes</span><span class="s2">.</span><span class="s0">flat</span><span class="s2">):</span>
+    <span class="s1">if </span><span class="s0">i </span><span class="s2">&lt; </span><span class="s6">64</span><span class="s2">:</span>
+        <span class="s5"># Display filter (squeeze channel dimension since it's only 1)</span>
+        <span class="s0">ax</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">filters</span><span class="s2">[</span><span class="s0">i</span><span class="s2">, </span><span class="s6">0</span><span class="s2">], </span><span class="s0">cmap</span><span class="s2">=</span><span class="s3">'gray'</span><span class="s2">)</span>
+        <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">f'</span><span class="s1">{</span><span class="s0">i</span><span class="s2">+</span><span class="s6">1</span><span class="s1">}</span><span class="s3">'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s6">8</span><span class="s2">)</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">'off'</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">suptitle</span><span class="s2">(</span><span class="s3">'Naučeni filtri v prvem konvolucijskem sloju (64 filtrov 9×9)'</span><span class="s2">,</span>
+             <span class="s0">fontsize</span><span class="s2">=</span><span class="s6">14</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span></pre>
+</body>
+</html>

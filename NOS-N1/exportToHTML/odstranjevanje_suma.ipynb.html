@@ -1,0 +1,411 @@
+<html>
+<head>
+<title>odstranjevanje_suma.ipynb</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #bcbec4;}
+.s1 { color: #cf8e6d;}
+.s2 { color: #bcbec4;}
+.s3 { color: #7a7e85;}
+.s4 { color: #2aacb8;}
+.s5 { color: #6aab73;}
+.ls0 { height: 1px; border-width: 0; color: #43454a; background-color:#43454a}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+odstranjevanje_suma.ipynb</font>
+</center></td></tr></table>
+<pre><span class="s0">#%% 
+</span><span class="s1">import </span><span class="s0">numpy </span><span class="s1">as </span><span class="s0">np</span>
+<span class="s1">import </span><span class="s0">matplotlib</span><span class="s2">.</span><span class="s0">pyplot </span><span class="s1">as </span><span class="s0">plt</span>
+<span class="s1">import </span><span class="s0">random</span>
+<span class="s1">import </span><span class="s0">os</span>
+<span class="s1">import </span><span class="s0">time</span>
+<span class="s1">from </span><span class="s0">datetime </span><span class="s1">import </span><span class="s0">datetime</span>
+
+<span class="s1">import </span><span class="s0">torch</span>
+<span class="s1">import </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">nn </span><span class="s1">as </span><span class="s0">nn</span>
+<span class="s1">import </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">optim </span><span class="s1">as </span><span class="s0">optim</span>
+<span class="s1">from </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">utils</span><span class="s2">.</span><span class="s0">data </span><span class="s1">import </span><span class="s0">DataLoader</span>
+<span class="s1">import </span><span class="s0">torchinfo</span>
+<span class="s1">import </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">amp </span><span class="s1">as </span><span class="s0">amp</span>
+
+<span class="s1">from </span><span class="s0">Generator </span><span class="s1">import </span><span class="s0">noise_mul</span><span class="s2">, </span><span class="s0">noise_add</span>
+<span class="s1">from </span><span class="s0">Helper </span><span class="s1">import </span><span class="s0">load_checkpoint_generic</span><span class="s2">, </span><span class="s0">save_checkpoint_generic</span>
+<span class="s1">from </span><span class="s0">Model </span><span class="s1">import </span><span class="s0">EdgePreservingDenoiser</span><span class="s2">, </span><span class="s0">SyntheticNoiseDataset</span><span class="s2">, </span><span class="s0">evaluate_model</span>
+<span class="s1">from </span><span class="s0">Model </span><span class="s1">import </span><span class="s0">load_dataset_arrays</span><span class="s2">, </span><span class="s0">save_dataset_arrays</span>
+
+<span class="s3"># Set random seeds for reproducibility</span>
+<span class="s0">torch</span><span class="s2">.</span><span class="s0">manual_seed</span><span class="s2">(</span><span class="s4">42</span><span class="s2">)</span>
+<span class="s0">np</span><span class="s2">.</span><span class="s0">random</span><span class="s2">.</span><span class="s0">seed</span><span class="s2">(</span><span class="s4">42</span><span class="s2">)</span>
+<span class="s0">random</span><span class="s2">.</span><span class="s0">seed</span><span class="s2">(</span><span class="s4">42</span><span class="s2">)</span>
+<hr class="ls0"><span class="s0">#%% 
+</span><span class="s3"># =============================================================================</span>
+<span class="s3"># DEVICE SETUP</span>
+<span class="s3"># =============================================================================</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;=&quot; </span><span class="s2">* </span><span class="s4">80</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;DEVICE CONFIGURATION&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;=&quot; </span><span class="s2">* </span><span class="s4">80</span><span class="s2">)</span>
+
+<span class="s1">if </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">cuda</span><span class="s2">.</span><span class="s0">is_available</span><span class="s2">():</span>
+    <span class="s0">num_devices </span><span class="s2">= </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">cuda</span><span class="s2">.</span><span class="s0">device_count</span><span class="s2">()</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;✅ CUDA available with </span><span class="s1">{</span><span class="s0">num_devices</span><span class="s1">} </span><span class="s5">device(s)&quot;</span><span class="s2">)</span>
+
+    <span class="s1">for </span><span class="s0">i </span><span class="s1">in </span><span class="s0">range</span><span class="s2">(</span><span class="s0">num_devices</span><span class="s2">):</span>
+        <span class="s0">device_name </span><span class="s2">= </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">cuda</span><span class="s2">.</span><span class="s0">get_device_name</span><span class="s2">(</span><span class="s0">i</span><span class="s2">)</span>
+        <span class="s0">total_memory </span><span class="s2">= </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">cuda</span><span class="s2">.</span><span class="s0">get_device_properties</span><span class="s2">(</span><span class="s0">i</span><span class="s2">).</span><span class="s0">total_memory </span><span class="s2">/ </span><span class="s4">1e9  </span><span class="s3"># in GB</span>
+        <span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;   Device </span><span class="s1">{</span><span class="s0">i</span><span class="s1">}</span><span class="s5">: </span><span class="s1">{</span><span class="s0">device_name</span><span class="s1">} </span><span class="s5">(</span><span class="s1">{</span><span class="s0">total_memory</span><span class="s1">:</span><span class="s5">.2f</span><span class="s1">} </span><span class="s5">GB)&quot;</span><span class="s2">)</span>
+<span class="s1">else</span><span class="s2">:</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;⚠️  CUDA not available, using CPU&quot;</span><span class="s2">)</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;=&quot; </span><span class="s2">* </span><span class="s4">80</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">()</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s3"># =============================================================================</span>
+<span class="s3"># HYPERPARAMETERS</span>
+<span class="s3"># =============================================================================</span>
+<span class="s0">BATCH_SIZE </span><span class="s2">= </span><span class="s4">64</span>
+<span class="s0">LEARNING_RATE </span><span class="s2">= </span><span class="s4">1e-3</span>
+<span class="s0">MAX_ITERATIONS </span><span class="s2">= </span><span class="s4">100_000  </span><span class="s3"># Total training iterations</span>
+<span class="s0">VALIDATION_INTERVAL </span><span class="s2">= </span><span class="s4">100  </span><span class="s3"># Validate every N iterations</span>
+<span class="s0">CHECKPOINT_INTERVAL </span><span class="s2">= </span><span class="s4">1000  </span><span class="s3"># Save checkpoint every N iterations</span>
+<span class="s0">LOG_INTERVAL </span><span class="s2">= </span><span class="s4">20  </span><span class="s3"># Log training progress every N iterations</span>
+
+<span class="s3"># Dataset Configuration</span>
+<span class="s0">TRAIN_SIZE </span><span class="s2">= </span><span class="s4">5000  </span><span class="s3"># Number of training samples</span>
+<span class="s0">VAL_SIZE </span><span class="s2">= </span><span class="s4">500     </span><span class="s3"># Number of validation samples</span>
+
+<span class="s3"># Noise Configuration</span>
+<span class="s3"># NOISE_FN = noise_add  # Additive noise</span>
+<span class="s0">NOISE_FN </span><span class="s2">= </span><span class="s0">noise_mul   </span><span class="s3"># Multiplicative noise</span>
+<span class="s0">NOISE_RANGE </span><span class="s2">= (</span><span class="s4">0.1</span><span class="s2">, </span><span class="s4">0.3</span><span class="s2">)</span>
+
+<span class="s3"># Loss Configuration</span>
+<span class="s0">LOSS_FN </span><span class="s2">= </span><span class="s5">'MSE'  </span><span class="s3"># Options: MSE, RMSE, MAE</span>
+
+<span class="s3"># Checkpoint directory</span>
+<span class="s0">CHECKPOINT_DIR </span><span class="s2">= </span><span class="s5">f&quot;checkpoints-</span><span class="s1">{</span><span class="s0">NOISE_FN</span><span class="s2">.</span><span class="s0">__name__</span><span class="s1">}</span><span class="s5">&quot;</span>
+<span class="s0">os</span><span class="s2">.</span><span class="s0">makedirs</span><span class="s2">(</span><span class="s0">CHECKPOINT_DIR</span><span class="s2">, </span><span class="s0">exist_ok</span><span class="s2">=</span><span class="s1">True</span><span class="s2">)</span>
+<hr class="ls0"><span class="s0">#%% 
+</span><span class="s3"># =============================================================================</span>
+<span class="s3"># MODEL SETUP &amp; DATA LOADING</span>
+<span class="s3"># =============================================================================</span>
+<span class="s0">device </span><span class="s2">= </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">device</span><span class="s2">(</span><span class="s5">&quot;cuda&quot; </span><span class="s1">if </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">cuda</span><span class="s2">.</span><span class="s0">is_available</span><span class="s2">() </span><span class="s1">else </span><span class="s5">&quot;cpu&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;=&quot; </span><span class="s2">* </span><span class="s4">80</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;TRAINING DEVICE: </span><span class="s1">{</span><span class="s0">device</span><span class="s1">}</span><span class="s5">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;=&quot; </span><span class="s2">* </span><span class="s4">80</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">()</span>
+
+<span class="s3"># Model</span>
+<span class="s0">model </span><span class="s2">= </span><span class="s0">EdgePreservingDenoiser</span><span class="s2">().</span><span class="s0">to</span><span class="s2">(</span><span class="s0">device</span><span class="s2">)</span>
+<span class="s1">if </span><span class="s0">device</span><span class="s2">.</span><span class="s0">type </span><span class="s2">== </span><span class="s5">'cuda'</span><span class="s2">:</span>
+    <span class="s0">model</span><span class="s2">.</span><span class="s0">to</span><span class="s2">(</span><span class="s0">memory_format</span><span class="s2">=</span><span class="s0">torch</span><span class="s2">.</span><span class="s0">channels_last</span><span class="s2">)</span>
+
+<span class="s3"># === LOAD OR GENERATE TRAIN DATASET ===</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;=&quot; </span><span class="s2">* </span><span class="s4">80</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;DATASET PREPARATION&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;=&quot; </span><span class="s2">* </span><span class="s4">80</span><span class="s2">)</span>
+<span class="s0">train_clean</span><span class="s2">, </span><span class="s0">train_noisy </span><span class="s2">= </span><span class="s0">load_dataset_arrays</span><span class="s2">(</span><span class="s0">CHECKPOINT_DIR</span><span class="s2">, </span><span class="s5">&quot;train&quot;</span><span class="s2">)</span>
+
+<span class="s1">if </span><span class="s0">train_clean </span><span class="s1">is not None</span><span class="s2">:</span>
+    <span class="s3"># Podatki obstajajo - uporabi jih (že v CHW formatu)</span>
+    <span class="s0">train_dataset </span><span class="s2">= </span><span class="s0">SyntheticNoiseDataset</span><span class="s2">(</span>
+        <span class="s0">clean_images</span><span class="s2">=</span><span class="s0">train_clean</span><span class="s2">,</span>
+        <span class="s0">noisy_images</span><span class="s2">=</span><span class="s0">train_noisy</span><span class="s2">,</span>
+        <span class="s0">to_channels_last</span><span class="s2">=</span><span class="s1">True</span><span class="s2">,</span>
+    <span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;✅ Train dataset created from loaded data: </span><span class="s1">{</span><span class="s0">len</span><span class="s2">(</span><span class="s0">train_dataset</span><span class="s2">)</span><span class="s1">} </span><span class="s5">samples&quot;</span><span class="s2">)</span>
+<span class="s1">else</span><span class="s2">:</span>
+    <span class="s3"># Podatki ne obstajajo - generiraj nove</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;🎨 Generating train dataset (</span><span class="s1">{</span><span class="s0">TRAIN_SIZE</span><span class="s1">} </span><span class="s5">samples)...&quot;</span><span class="s2">)</span>
+    <span class="s0">train_dataset </span><span class="s2">= </span><span class="s0">SyntheticNoiseDataset</span><span class="s2">(</span>
+        <span class="s0">num_samples</span><span class="s2">=</span><span class="s0">TRAIN_SIZE</span><span class="s2">,</span>
+        <span class="s0">noise_fn</span><span class="s2">=</span><span class="s0">NOISE_FN</span><span class="s2">,</span>
+        <span class="s0">noise_range</span><span class="s2">=</span><span class="s0">NOISE_RANGE</span><span class="s2">,</span>
+        <span class="s0">to_channels_last</span><span class="s2">=</span><span class="s1">True</span><span class="s2">,</span>
+    <span class="s2">)</span>
+    <span class="s3"># Shrani dataset direktno (že v CHW formatu)</span>
+    <span class="s0">save_dataset_arrays</span><span class="s2">(</span><span class="s0">CHECKPOINT_DIR</span><span class="s2">, </span><span class="s5">&quot;train&quot;</span><span class="s2">, </span><span class="s0">train_dataset</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;✅ Train dataset generated and saved: </span><span class="s1">{</span><span class="s0">len</span><span class="s2">(</span><span class="s0">train_dataset</span><span class="s2">)</span><span class="s1">} </span><span class="s5">samples&quot;</span><span class="s2">)</span>
+
+<span class="s3"># === LOAD OR GENERATE VALIDATION DATASET ===</span>
+<span class="s0">val_clean</span><span class="s2">, </span><span class="s0">val_noisy </span><span class="s2">= </span><span class="s0">load_dataset_arrays</span><span class="s2">(</span><span class="s0">CHECKPOINT_DIR</span><span class="s2">, </span><span class="s5">&quot;val&quot;</span><span class="s2">)</span>
+
+<span class="s1">if </span><span class="s0">val_clean </span><span class="s1">is not None</span><span class="s2">:</span>
+    <span class="s3"># Podatki obstajajo - uporabi jih (že v CHW formatu)</span>
+    <span class="s0">val_dataset </span><span class="s2">= </span><span class="s0">SyntheticNoiseDataset</span><span class="s2">(</span>
+        <span class="s0">clean_images</span><span class="s2">=</span><span class="s0">val_clean</span><span class="s2">,</span>
+        <span class="s0">noisy_images</span><span class="s2">=</span><span class="s0">val_noisy</span><span class="s2">,</span>
+        <span class="s0">to_channels_last</span><span class="s2">=</span><span class="s1">True</span><span class="s2">,</span>
+    <span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;✅ Validation dataset created from loaded data: </span><span class="s1">{</span><span class="s0">len</span><span class="s2">(</span><span class="s0">val_dataset</span><span class="s2">)</span><span class="s1">} </span><span class="s5">samples&quot;</span><span class="s2">)</span>
+<span class="s1">else</span><span class="s2">:</span>
+    <span class="s3"># Podatki ne obstajajo - generiraj nove</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;🎨 Generating validation dataset (</span><span class="s1">{</span><span class="s0">VAL_SIZE</span><span class="s1">} </span><span class="s5">samples)...&quot;</span><span class="s2">)</span>
+    <span class="s0">val_dataset </span><span class="s2">= </span><span class="s0">SyntheticNoiseDataset</span><span class="s2">(</span>
+        <span class="s0">num_samples</span><span class="s2">=</span><span class="s0">VAL_SIZE</span><span class="s2">,</span>
+        <span class="s0">noise_fn</span><span class="s2">=</span><span class="s0">NOISE_FN</span><span class="s2">,</span>
+        <span class="s0">noise_range</span><span class="s2">=</span><span class="s0">NOISE_RANGE</span><span class="s2">,</span>
+        <span class="s0">to_channels_last</span><span class="s2">=</span><span class="s1">True</span><span class="s2">,</span>
+    <span class="s2">)</span>
+    <span class="s3"># Shrani dataset direktno (že v CHW formatu)</span>
+    <span class="s0">save_dataset_arrays</span><span class="s2">(</span><span class="s0">CHECKPOINT_DIR</span><span class="s2">, </span><span class="s5">&quot;val&quot;</span><span class="s2">, </span><span class="s0">val_dataset</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;✅ Validation dataset generated and saved: </span><span class="s1">{</span><span class="s0">len</span><span class="s2">(</span><span class="s0">val_dataset</span><span class="s2">)</span><span class="s1">} </span><span class="s5">samples&quot;</span><span class="s2">)</span>
+
+<span class="s0">torch</span><span class="s2">.</span><span class="s0">backends</span><span class="s2">.</span><span class="s0">cudnn</span><span class="s2">.</span><span class="s0">benchmark </span><span class="s2">= </span><span class="s1">True</span>
+
+<span class="s3"># === CREATE DATALOADERS ===</span>
+<span class="s0">train_loader </span><span class="s2">= </span><span class="s0">DataLoader</span><span class="s2">(</span>
+    <span class="s0">train_dataset</span><span class="s2">,</span>
+    <span class="s0">batch_size</span><span class="s2">=</span><span class="s0">BATCH_SIZE</span><span class="s2">,</span>
+    <span class="s0">shuffle</span><span class="s2">=</span><span class="s1">True</span><span class="s2">,</span>
+    <span class="s0">num_workers</span><span class="s2">=</span><span class="s4">0</span><span class="s2">,</span>
+    <span class="s0">pin_memory</span><span class="s2">=</span><span class="s1">True</span><span class="s2">,</span>
+    <span class="s0">drop_last</span><span class="s2">=</span><span class="s1">True</span>
+<span class="s2">)</span>
+
+<span class="s0">val_loader </span><span class="s2">= </span><span class="s0">DataLoader</span><span class="s2">(</span>
+    <span class="s0">val_dataset</span><span class="s2">,</span>
+    <span class="s0">batch_size</span><span class="s2">=</span><span class="s0">BATCH_SIZE</span><span class="s2">,</span>
+    <span class="s0">shuffle</span><span class="s2">=</span><span class="s1">False</span><span class="s2">,</span>
+    <span class="s0">num_workers</span><span class="s2">=</span><span class="s4">0</span><span class="s2">,</span>
+    <span class="s0">pin_memory</span><span class="s2">=</span><span class="s1">True</span><span class="s2">,</span>
+    <span class="s0">drop_last</span><span class="s2">=</span><span class="s1">False</span>
+<span class="s2">)</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;=&quot; </span><span class="s2">* </span><span class="s4">80</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">()</span>
+<hr class="ls0"><span class="s0">#%% 
+</span><span class="s3"># =============================================================================</span>
+<span class="s3"># OPTIMIZER &amp; LOSS FUNCTION</span>
+<span class="s3"># =============================================================================</span>
+<span class="s3"># Optimizer</span>
+<span class="s0">optimizer </span><span class="s2">= </span><span class="s0">optim</span><span class="s2">.</span><span class="s0">AdamW</span><span class="s2">(</span><span class="s0">model</span><span class="s2">.</span><span class="s0">parameters</span><span class="s2">(), </span><span class="s0">lr</span><span class="s2">=</span><span class="s0">LEARNING_RATE</span><span class="s2">)</span>
+<span class="s0">scaler </span><span class="s2">= </span><span class="s0">amp</span><span class="s2">.</span><span class="s0">GradScaler</span><span class="s2">()</span>
+
+
+<span class="s3"># Loss function</span>
+<span class="s1">if </span><span class="s0">LOSS_FN </span><span class="s2">== </span><span class="s5">'MSE'</span><span class="s2">:</span>
+    <span class="s0">criterion </span><span class="s2">= </span><span class="s0">nn</span><span class="s2">.</span><span class="s0">MSELoss</span><span class="s2">()</span>
+<span class="s1">elif </span><span class="s0">LOSS_FN </span><span class="s2">== </span><span class="s5">'RMSE'</span><span class="s2">:</span>
+    <span class="s0">criterion </span><span class="s2">= </span><span class="s1">lambda </span><span class="s0">pred</span><span class="s2">, </span><span class="s0">target</span><span class="s2">: </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">sqrt</span><span class="s2">(</span><span class="s0">nn</span><span class="s2">.</span><span class="s0">MSELoss</span><span class="s2">()(</span><span class="s0">pred</span><span class="s2">, </span><span class="s0">target</span><span class="s2">))</span>
+<span class="s1">elif </span><span class="s0">LOSS_FN </span><span class="s2">== </span><span class="s5">'MAE'</span><span class="s2">:</span>
+    <span class="s0">criterion </span><span class="s2">= </span><span class="s0">nn</span><span class="s2">.</span><span class="s0">L1Loss</span><span class="s2">()</span>
+<span class="s1">else</span><span class="s2">:</span>
+    <span class="s1">raise </span><span class="s0">ValueError</span><span class="s2">(</span><span class="s5">f&quot;Unknown loss function: </span><span class="s1">{</span><span class="s0">LOSS_FN</span><span class="s1">}</span><span class="s5">&quot;</span><span class="s2">)</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;=&quot; </span><span class="s2">* </span><span class="s4">80</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;OPTIMIZER &amp; LOSS&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;=&quot; </span><span class="s2">* </span><span class="s4">80</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;Optimizer:      AdamW&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;Learning Rate:  </span><span class="s1">{</span><span class="s0">LEARNING_RATE</span><span class="s1">}</span><span class="s5">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;Loss Function:  </span><span class="s1">{</span><span class="s0">LOSS_FN</span><span class="s1">}</span><span class="s5">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;=&quot; </span><span class="s2">* </span><span class="s4">80</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">()</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s3"># =============================================================================</span>
+<span class="s3"># MODEL ARCHITECTURE SUMMARY</span>
+<span class="s3"># =============================================================================</span>
+<span class="s0">torchinfo</span><span class="s2">.</span><span class="s0">summary</span><span class="s2">(</span><span class="s0">model</span><span class="s2">, </span><span class="s0">input_size</span><span class="s2">=(</span><span class="s4">1</span><span class="s2">, </span><span class="s4">3</span><span class="s2">, </span><span class="s4">256</span><span class="s2">, </span><span class="s4">256</span><span class="s2">), </span><span class="s0">device</span><span class="s2">=</span><span class="s0">device</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s3"># =============================================================================</span>
+<span class="s3"># TRAINING LOOP</span>
+<span class="s3"># =============================================================================</span>
+<span class="s3"># Load checkpoint</span>
+<span class="s0">checkpoint </span><span class="s2">= </span><span class="s0">load_checkpoint_generic</span><span class="s2">(</span><span class="s0">CHECKPOINT_DIR</span><span class="s2">, </span><span class="s0">device</span><span class="s2">=</span><span class="s0">device</span><span class="s2">)</span>
+
+<span class="s0">start_iteration </span><span class="s2">= </span><span class="s4">1</span>
+<span class="s0">train_losses </span><span class="s2">= []</span>
+<span class="s0">val_losses </span><span class="s2">= []</span>
+<span class="s0">val_snrs </span><span class="s2">= []</span>
+<span class="s0">val_psnrs </span><span class="s2">= []</span>
+<span class="s0">best_val_loss </span><span class="s2">= </span><span class="s0">float</span><span class="s2">(</span><span class="s5">'inf'</span><span class="s2">)  </span><span class="s3"># Track best validation loss</span>
+
+<span class="s1">if </span><span class="s0">checkpoint</span><span class="s2">:</span>
+    <span class="s0">model</span><span class="s2">.</span><span class="s0">load_state_dict</span><span class="s2">(</span><span class="s0">checkpoint</span><span class="s2">[</span><span class="s5">'model_state_dict'</span><span class="s2">])</span>
+    <span class="s0">optimizer</span><span class="s2">.</span><span class="s0">load_state_dict</span><span class="s2">(</span><span class="s0">checkpoint</span><span class="s2">[</span><span class="s5">'optimizer_state_dict'</span><span class="s2">])</span>
+    <span class="s0">scaler</span><span class="s2">.</span><span class="s0">load_state_dict</span><span class="s2">(</span><span class="s0">checkpoint</span><span class="s2">[</span><span class="s5">'scaler_state_dict'</span><span class="s2">])</span>
+    <span class="s0">start_iteration </span><span class="s2">= </span><span class="s0">checkpoint</span><span class="s2">.</span><span class="s0">get</span><span class="s2">(</span><span class="s5">'iteration'</span><span class="s2">, </span><span class="s4">0</span><span class="s2">) + </span><span class="s4">1</span>
+    <span class="s0">train_losses </span><span class="s2">= </span><span class="s0">checkpoint</span><span class="s2">.</span><span class="s0">get</span><span class="s2">(</span><span class="s5">'train_losses'</span><span class="s2">, [])</span>
+    <span class="s0">val_losses </span><span class="s2">= </span><span class="s0">checkpoint</span><span class="s2">.</span><span class="s0">get</span><span class="s2">(</span><span class="s5">'val_losses'</span><span class="s2">, [])</span>
+    <span class="s0">val_snrs </span><span class="s2">= </span><span class="s0">checkpoint</span><span class="s2">.</span><span class="s0">get</span><span class="s2">(</span><span class="s5">'val_snrs'</span><span class="s2">, [])</span>
+    <span class="s0">val_psnrs </span><span class="s2">= </span><span class="s0">checkpoint</span><span class="s2">.</span><span class="s0">get</span><span class="s2">(</span><span class="s5">'val_psnrs'</span><span class="s2">, [])</span>
+    <span class="s0">best_val_loss </span><span class="s2">= </span><span class="s0">checkpoint</span><span class="s2">.</span><span class="s0">get</span><span class="s2">(</span><span class="s5">'best_val_loss'</span><span class="s2">, </span><span class="s0">min</span><span class="s2">(</span><span class="s0">val_losses</span><span class="s2">) </span><span class="s1">if </span><span class="s0">val_losses </span><span class="s1">else </span><span class="s0">float</span><span class="s2">(</span><span class="s5">'inf'</span><span class="s2">))</span>
+
+    <span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;=&quot; </span><span class="s2">* </span><span class="s4">80</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;CHECKPOINT LOADED&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;=&quot; </span><span class="s2">* </span><span class="s4">80</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;Resuming from iteration:    </span><span class="s1">{</span><span class="s0">start_iteration</span><span class="s1">}</span><span class="s5">&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;Train losses recorded:      </span><span class="s1">{</span><span class="s0">len</span><span class="s2">(</span><span class="s0">train_losses</span><span class="s2">)</span><span class="s1">}</span><span class="s5">&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;Val losses recorded:        </span><span class="s1">{</span><span class="s0">len</span><span class="s2">(</span><span class="s0">val_losses</span><span class="s2">)</span><span class="s1">}</span><span class="s5">&quot;</span><span class="s2">)</span>
+    <span class="s1">if </span><span class="s0">val_losses</span><span class="s2">:</span>
+        <span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;Best Val Loss so far:       </span><span class="s1">{</span><span class="s0">best_val_loss</span><span class="s1">:</span><span class="s5">.6f</span><span class="s1">}</span><span class="s5">&quot;</span><span class="s2">)</span>
+    <span class="s1">if </span><span class="s0">val_psnrs</span><span class="s2">:</span>
+        <span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;Best Val PSNR so far:       </span><span class="s1">{</span><span class="s0">max</span><span class="s2">(</span><span class="s0">val_psnrs</span><span class="s2">)</span><span class="s1">:</span><span class="s5">.2f</span><span class="s1">} </span><span class="s5">dB&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;=&quot; </span><span class="s2">* </span><span class="s4">80</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">()</span>
+<span class="s1">else</span><span class="s2">:</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;=&quot; </span><span class="s2">* </span><span class="s4">80</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;STARTING NEW TRAINING&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;=&quot; </span><span class="s2">* </span><span class="s4">80</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">()</span>
+
+<span class="s0">model</span><span class="s2">.</span><span class="s0">train</span><span class="s2">()</span>
+
+<span class="s3"># Iterator for infinite iteration through dataset</span>
+<span class="s0">train_iterator </span><span class="s2">= </span><span class="s0">iter</span><span class="s2">(</span><span class="s0">train_loader</span><span class="s2">)</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;=&quot; </span><span class="s2">* </span><span class="s4">80</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;TRAINING STARTED&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;=&quot; </span><span class="s2">* </span><span class="s4">80</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;Start Time: </span><span class="s1">{</span><span class="s0">datetime</span><span class="s2">.</span><span class="s0">now</span><span class="s2">().</span><span class="s0">strftime</span><span class="s2">(</span><span class="s5">'%Y-%m-%d %H:%M:%S'</span><span class="s2">)</span><span class="s1">}</span><span class="s5">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;=&quot; </span><span class="s2">* </span><span class="s4">80</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">()</span>
+
+<span class="s0">training_start_time </span><span class="s2">= </span><span class="s0">time</span><span class="s2">.</span><span class="s0">time</span><span class="s2">()</span>
+<span class="s0">last_log_time </span><span class="s2">= </span><span class="s0">time</span><span class="s2">.</span><span class="s0">time</span><span class="s2">()</span>
+
+<span class="s1">for </span><span class="s0">iteration </span><span class="s1">in </span><span class="s0">range</span><span class="s2">(</span><span class="s0">start_iteration</span><span class="s2">, </span><span class="s0">MAX_ITERATIONS </span><span class="s2">+ </span><span class="s4">1</span><span class="s2">):</span>
+    <span class="s1">try</span><span class="s2">:</span>
+        <span class="s0">noisy</span><span class="s2">, </span><span class="s0">clean </span><span class="s2">= </span><span class="s0">next</span><span class="s2">(</span><span class="s0">train_iterator</span><span class="s2">)</span>
+    <span class="s1">except </span><span class="s0">StopIteration</span><span class="s2">:</span>
+        <span class="s3"># Restart iterator when we reach the end of dataset</span>
+        <span class="s0">train_iterator </span><span class="s2">= </span><span class="s0">iter</span><span class="s2">(</span><span class="s0">train_loader</span><span class="s2">)</span>
+        <span class="s0">noisy</span><span class="s2">, </span><span class="s0">clean </span><span class="s2">= </span><span class="s0">next</span><span class="s2">(</span><span class="s0">train_iterator</span><span class="s2">)</span>
+
+    <span class="s0">noisy </span><span class="s2">= </span><span class="s0">noisy</span><span class="s2">.</span><span class="s0">to</span><span class="s2">(</span><span class="s0">device</span><span class="s2">, </span><span class="s0">non_blocking</span><span class="s2">=</span><span class="s1">True</span><span class="s2">)</span>
+    <span class="s0">clean </span><span class="s2">= </span><span class="s0">clean</span><span class="s2">.</span><span class="s0">to</span><span class="s2">(</span><span class="s0">device</span><span class="s2">, </span><span class="s0">non_blocking</span><span class="s2">=</span><span class="s1">True</span><span class="s2">)</span>
+
+    <span class="s3"># Forward pass</span>
+    <span class="s0">optimizer</span><span class="s2">.</span><span class="s0">zero_grad</span><span class="s2">(</span><span class="s0">set_to_none</span><span class="s2">=</span><span class="s1">True</span><span class="s2">)</span>
+    <span class="s1">with </span><span class="s0">amp</span><span class="s2">.</span><span class="s0">autocast</span><span class="s2">(</span><span class="s0">device_type</span><span class="s2">=</span><span class="s0">device</span><span class="s2">.</span><span class="s0">type</span><span class="s2">):</span>
+        <span class="s0">denoised </span><span class="s2">= </span><span class="s0">model</span><span class="s2">(</span><span class="s0">noisy</span><span class="s2">)</span>
+        <span class="s0">loss </span><span class="s2">= </span><span class="s0">criterion</span><span class="s2">(</span><span class="s0">denoised</span><span class="s2">, </span><span class="s0">clean</span><span class="s2">)</span>
+
+    <span class="s3"># Backward pass</span>
+    <span class="s0">scaler</span><span class="s2">.</span><span class="s0">scale</span><span class="s2">(</span><span class="s0">loss</span><span class="s2">).</span><span class="s0">backward</span><span class="s2">()</span>
+    <span class="s0">scaler</span><span class="s2">.</span><span class="s0">step</span><span class="s2">(</span><span class="s0">optimizer</span><span class="s2">)</span>
+    <span class="s0">scaler</span><span class="s2">.</span><span class="s0">update</span><span class="s2">()</span>
+
+    <span class="s3"># Track metrics</span>
+    <span class="s0">train_losses</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">loss</span><span class="s2">.</span><span class="s0">item</span><span class="s2">())</span>
+
+    <span class="s3"># === CONSOLE LOGGING ===</span>
+    <span class="s1">if </span><span class="s0">iteration </span><span class="s2">% </span><span class="s0">LOG_INTERVAL </span><span class="s2">== </span><span class="s4">0 </span><span class="s1">or </span><span class="s0">iteration </span><span class="s2">== </span><span class="s4">1 </span><span class="s1">or </span><span class="s0">iteration </span><span class="s2">== </span><span class="s0">MAX_ITERATIONS</span><span class="s2">:</span>
+        <span class="s0">current_time </span><span class="s2">= </span><span class="s0">time</span><span class="s2">.</span><span class="s0">time</span><span class="s2">()</span>
+        <span class="s0">interval_time </span><span class="s2">= </span><span class="s0">current_time </span><span class="s2">- </span><span class="s0">last_log_time</span>
+
+        <span class="s3"># Calculate actual iterations in this interval</span>
+        <span class="s1">if </span><span class="s0">iteration </span><span class="s2">== </span><span class="s4">1</span><span class="s2">:</span>
+            <span class="s0">actual_iters </span><span class="s2">= </span><span class="s4">1</span>
+        <span class="s1">elif </span><span class="s0">iteration </span><span class="s2">== </span><span class="s0">MAX_ITERATIONS </span><span class="s1">and </span><span class="s0">iteration </span><span class="s2">% </span><span class="s0">LOG_INTERVAL </span><span class="s2">!= </span><span class="s4">0</span><span class="s2">:</span>
+            <span class="s0">actual_iters </span><span class="s2">= </span><span class="s0">iteration </span><span class="s2">% </span><span class="s0">LOG_INTERVAL</span>
+        <span class="s1">else</span><span class="s2">:</span>
+            <span class="s0">actual_iters </span><span class="s2">= </span><span class="s0">LOG_INTERVAL</span>
+
+        <span class="s0">avg_iter_time </span><span class="s2">= </span><span class="s0">interval_time </span><span class="s2">/ </span><span class="s0">actual_iters</span>
+        <span class="s0">last_log_time </span><span class="s2">= </span><span class="s0">current_time</span>
+
+        <span class="s3"># Recent average loss</span>
+        <span class="s0">recent_losses </span><span class="s2">= </span><span class="s0">train_losses</span><span class="s2">[-</span><span class="s0">LOG_INTERVAL</span><span class="s2">:] </span><span class="s1">if </span><span class="s0">len</span><span class="s2">(</span><span class="s0">train_losses</span><span class="s2">) &gt;= </span><span class="s0">LOG_INTERVAL </span><span class="s1">else </span><span class="s0">train_losses</span>
+        <span class="s0">avg_loss </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">recent_losses</span><span class="s2">)</span>
+
+        <span class="s3"># Progress percentage</span>
+        <span class="s0">progress </span><span class="s2">= (</span><span class="s0">iteration </span><span class="s2">/ </span><span class="s0">MAX_ITERATIONS</span><span class="s2">) * </span><span class="s4">100</span>
+
+        <span class="s3"># Calculate ETA using OVERALL average (not just recent interval)</span>
+        <span class="s3"># This gives more accurate estimates, especially later in training</span>
+        <span class="s0">elapsed_total </span><span class="s2">= </span><span class="s0">current_time </span><span class="s2">- </span><span class="s0">training_start_time</span>
+        <span class="s0">completed_iters </span><span class="s2">= </span><span class="s0">iteration </span><span class="s2">- </span><span class="s0">start_iteration </span><span class="s2">+ </span><span class="s4">1</span>
+        <span class="s0">overall_avg_iter_time </span><span class="s2">= </span><span class="s0">elapsed_total </span><span class="s2">/ </span><span class="s0">completed_iters </span><span class="s1">if </span><span class="s0">completed_iters </span><span class="s2">&gt; </span><span class="s4">0 </span><span class="s1">else </span><span class="s0">avg_iter_time</span>
+
+        <span class="s0">remaining_iters </span><span class="s2">= </span><span class="s0">MAX_ITERATIONS </span><span class="s2">- </span><span class="s0">iteration</span>
+        <span class="s0">eta_seconds </span><span class="s2">= </span><span class="s0">remaining_iters </span><span class="s2">* </span><span class="s0">overall_avg_iter_time</span>
+        <span class="s0">eta_hours </span><span class="s2">= </span><span class="s0">eta_seconds </span><span class="s2">/ </span><span class="s4">3600</span>
+
+        <span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;[Iter </span><span class="s1">{</span><span class="s0">iteration</span><span class="s1">:</span><span class="s5">6d</span><span class="s1">}</span><span class="s5">/</span><span class="s1">{</span><span class="s0">MAX_ITERATIONS</span><span class="s1">}</span><span class="s5">] &quot;</span>
+              <span class="s5">f&quot;Loss: </span><span class="s1">{</span><span class="s0">loss</span><span class="s2">.</span><span class="s0">item</span><span class="s2">()</span><span class="s1">:</span><span class="s5">.6f</span><span class="s1">} </span><span class="s5">(avg: </span><span class="s1">{</span><span class="s0">avg_loss</span><span class="s1">:</span><span class="s5">.6f</span><span class="s1">}</span><span class="s5">) | &quot;</span>
+              <span class="s5">f&quot;Interval: </span><span class="s1">{</span><span class="s0">interval_time</span><span class="s1">:</span><span class="s5">.2f</span><span class="s1">}</span><span class="s5">s (</span><span class="s1">{</span><span class="s0">avg_iter_time</span><span class="s1">:</span><span class="s5">.3f</span><span class="s1">}</span><span class="s5">s/iter) | &quot;</span>
+              <span class="s5">f&quot;ETA: </span><span class="s1">{</span><span class="s0">eta_hours</span><span class="s1">:</span><span class="s5">.2f</span><span class="s1">}</span><span class="s5">h | &quot;</span>
+              <span class="s5">f&quot;Progress: </span><span class="s1">{</span><span class="s0">progress</span><span class="s1">:</span><span class="s5">.1f</span><span class="s1">}</span><span class="s5">%&quot;</span><span class="s2">)</span>
+
+    <span class="s3"># === VALIDATION ===</span>
+    <span class="s1">if </span><span class="s0">iteration </span><span class="s2">% </span><span class="s0">VALIDATION_INTERVAL </span><span class="s2">== </span><span class="s4">0</span><span class="s2">:</span>
+        <span class="s0">val_start </span><span class="s2">= </span><span class="s0">time</span><span class="s2">.</span><span class="s0">time</span><span class="s2">()</span>
+        <span class="s0">val_loss</span><span class="s2">, </span><span class="s0">val_snr</span><span class="s2">, </span><span class="s0">val_psnr </span><span class="s2">= </span><span class="s0">evaluate_model</span><span class="s2">(</span><span class="s0">model</span><span class="s2">, </span><span class="s0">val_loader</span><span class="s2">, </span><span class="s0">device</span><span class="s2">)</span>
+        <span class="s0">val_time </span><span class="s2">= </span><span class="s0">time</span><span class="s2">.</span><span class="s0">time</span><span class="s2">() - </span><span class="s0">val_start</span>
+
+        <span class="s0">val_losses</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">val_loss</span><span class="s2">)</span>
+        <span class="s0">val_snrs</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">val_snr</span><span class="s2">)</span>
+        <span class="s0">val_psnrs</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">val_psnr</span><span class="s2">)</span>
+
+        <span class="s3"># Check if this is the best model based on validation loss</span>
+        <span class="s0">is_best </span><span class="s2">= </span><span class="s0">val_loss </span><span class="s2">&lt; </span><span class="s0">best_val_loss</span>
+        <span class="s1">if </span><span class="s0">is_best</span><span class="s2">:</span>
+            <span class="s0">best_val_loss </span><span class="s2">= </span><span class="s0">val_loss</span>
+
+        <span class="s3"># Compact one-line validation output</span>
+        <span class="s0">best_indicator </span><span class="s2">= </span><span class="s5">&quot; 🌟 BEST!&quot; </span><span class="s1">if </span><span class="s0">is_best </span><span class="s1">else </span><span class="s5">&quot;&quot;</span>
+        <span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;[VAL @ </span><span class="s1">{</span><span class="s0">iteration</span><span class="s1">:</span><span class="s5">6d</span><span class="s1">}</span><span class="s5">] Loss: </span><span class="s1">{</span><span class="s0">val_loss</span><span class="s1">:</span><span class="s5">.6f</span><span class="s1">}{</span><span class="s0">best_indicator</span><span class="s1">} </span><span class="s5">| &quot;</span>
+              <span class="s5">f&quot;SNR: </span><span class="s1">{</span><span class="s0">val_snr</span><span class="s1">:</span><span class="s5">.2f</span><span class="s1">} </span><span class="s5">dB | PSNR: </span><span class="s1">{</span><span class="s0">val_psnr</span><span class="s1">:</span><span class="s5">.2f</span><span class="s1">} </span><span class="s5">dB | &quot;</span>
+              <span class="s5">f&quot;Time: </span><span class="s1">{</span><span class="s0">val_time</span><span class="s1">:</span><span class="s5">.2f</span><span class="s1">}</span><span class="s5">s&quot;</span><span class="s2">)</span>
+
+        <span class="s0">model</span><span class="s2">.</span><span class="s0">train</span><span class="s2">()  </span><span class="s3"># Back to training mode</span>
+
+    <span class="s3"># === CHECKPOINT SAVING ===</span>
+    <span class="s1">if </span><span class="s0">iteration </span><span class="s2">% </span><span class="s0">CHECKPOINT_INTERVAL </span><span class="s2">== </span><span class="s4">0 </span><span class="s1">or </span><span class="s0">iteration </span><span class="s2">== </span><span class="s0">MAX_ITERATIONS</span><span class="s2">:</span>
+        <span class="s0">checkpoint_data </span><span class="s2">= {</span>
+            <span class="s5">'iteration'</span><span class="s2">: </span><span class="s0">iteration</span><span class="s2">,</span>
+            <span class="s5">'model_state_dict'</span><span class="s2">: </span><span class="s0">model</span><span class="s2">.</span><span class="s0">state_dict</span><span class="s2">(),</span>
+            <span class="s5">'optimizer_state_dict'</span><span class="s2">: </span><span class="s0">optimizer</span><span class="s2">.</span><span class="s0">state_dict</span><span class="s2">(),</span>
+            <span class="s5">'scaler_state_dict'</span><span class="s2">: </span><span class="s0">scaler</span><span class="s2">.</span><span class="s0">state_dict</span><span class="s2">(),</span>
+            <span class="s5">'train_losses'</span><span class="s2">: </span><span class="s0">train_losses</span><span class="s2">,</span>
+            <span class="s5">'val_losses'</span><span class="s2">: </span><span class="s0">val_losses</span><span class="s2">,</span>
+            <span class="s5">'val_snrs'</span><span class="s2">: </span><span class="s0">val_snrs</span><span class="s2">,</span>
+            <span class="s5">'val_psnrs'</span><span class="s2">: </span><span class="s0">val_psnrs</span><span class="s2">,</span>
+            <span class="s5">'best_val_loss'</span><span class="s2">: </span><span class="s0">best_val_loss</span><span class="s2">,</span>
+            <span class="s5">'config'</span><span class="s2">: {</span>
+                <span class="s5">'batch_size'</span><span class="s2">: </span><span class="s0">BATCH_SIZE</span><span class="s2">,</span>
+                <span class="s5">'learning_rate'</span><span class="s2">: </span><span class="s0">LEARNING_RATE</span><span class="s2">,</span>
+                <span class="s5">'noise_fn'</span><span class="s2">: </span><span class="s0">NOISE_FN</span><span class="s2">.</span><span class="s0">__name__</span><span class="s2">,</span>
+                <span class="s5">'loss_fn'</span><span class="s2">: </span><span class="s0">LOSS_FN</span><span class="s2">,</span>
+                <span class="s5">'train_size'</span><span class="s2">: </span><span class="s0">TRAIN_SIZE</span><span class="s2">,</span>
+                <span class="s5">'val_size'</span><span class="s2">: </span><span class="s0">VAL_SIZE</span><span class="s2">,</span>
+                <span class="s5">'noise_range'</span><span class="s2">: </span><span class="s0">NOISE_RANGE</span>
+            <span class="s2">}</span>
+        <span class="s2">}</span>
+
+        <span class="s0">save_checkpoint_generic</span><span class="s2">(</span>
+            <span class="s0">CHECKPOINT_DIR</span><span class="s2">,</span>
+            <span class="s0">iteration</span><span class="s2">,</span>
+            <span class="s0">checkpoint_data</span><span class="s2">,</span>
+            <span class="s0">max_checkpoints</span><span class="s2">=</span><span class="s4">5</span>
+        <span class="s2">)</span>
+
+        <span class="s3"># Save best model separately when we have a new best</span>
+        <span class="s1">if </span><span class="s0">val_losses </span><span class="s1">and </span><span class="s0">val_losses</span><span class="s2">[-</span><span class="s4">1</span><span class="s2">] == </span><span class="s0">best_val_loss</span><span class="s2">:</span>
+            <span class="s0">best_model_path </span><span class="s2">= </span><span class="s0">os</span><span class="s2">.</span><span class="s0">path</span><span class="s2">.</span><span class="s0">join</span><span class="s2">(</span><span class="s0">CHECKPOINT_DIR</span><span class="s2">, </span><span class="s5">&quot;best_model.pth&quot;</span><span class="s2">)</span>
+            <span class="s0">torch</span><span class="s2">.</span><span class="s0">save</span><span class="s2">(</span><span class="s0">model</span><span class="s2">.</span><span class="s0">state_dict</span><span class="s2">(), </span><span class="s0">best_model_path</span><span class="s2">)</span>
+            <span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;💾 Best model saved: </span><span class="s1">{</span><span class="s0">best_model_path</span><span class="s1">}</span><span class="s5">&quot;</span><span class="s2">)</span>
+
+<span class="s3"># Save final model</span>
+<span class="s0">final_model_path </span><span class="s2">= </span><span class="s5">f&quot;denoiser_</span><span class="s1">{</span><span class="s0">NOISE_FN</span><span class="s2">.</span><span class="s0">__name__</span><span class="s1">}</span><span class="s5">_iter</span><span class="s1">{</span><span class="s0">MAX_ITERATIONS</span><span class="s1">}</span><span class="s5">.pth&quot;</span>
+<span class="s0">torch</span><span class="s2">.</span><span class="s0">save</span><span class="s2">(</span><span class="s0">model</span><span class="s2">.</span><span class="s0">state_dict</span><span class="s2">(), </span><span class="s0">final_model_path</span><span class="s2">)</span>
+
+<span class="s3"># Training summary</span>
+<span class="s0">total_time </span><span class="s2">= </span><span class="s0">time</span><span class="s2">.</span><span class="s0">time</span><span class="s2">() - </span><span class="s0">training_start_time</span>
+<span class="s0">total_hours </span><span class="s2">= </span><span class="s0">total_time </span><span class="s2">/ </span><span class="s4">3600</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;</span><span class="s1">\n</span><span class="s5">&quot; </span><span class="s2">+ </span><span class="s5">&quot;=&quot; </span><span class="s2">* </span><span class="s4">80</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;TRAINING COMPLETE!&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;=&quot; </span><span class="s2">* </span><span class="s4">80</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;Total Training Time:    </span><span class="s1">{</span><span class="s0">total_hours</span><span class="s1">:</span><span class="s5">.2f</span><span class="s1">} </span><span class="s5">hours (</span><span class="s1">{</span><span class="s0">total_time</span><span class="s1">:</span><span class="s5">.0f</span><span class="s1">}</span><span class="s5">s)&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;Total Iterations:       </span><span class="s1">{</span><span class="s0">MAX_ITERATIONS </span><span class="s2">- </span><span class="s0">start_iteration </span><span class="s2">+ </span><span class="s4">1</span><span class="s1">}</span><span class="s5">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;Final Train Loss:       </span><span class="s1">{</span><span class="s0">train_losses</span><span class="s2">[-</span><span class="s4">1</span><span class="s2">]</span><span class="s1">:</span><span class="s5">.6f</span><span class="s1">}</span><span class="s5">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;Final Val Loss:         </span><span class="s1">{</span><span class="s0">val_losses</span><span class="s2">[-</span><span class="s4">1</span><span class="s2">]</span><span class="s1">:</span><span class="s5">.6f</span><span class="s1">}</span><span class="s5">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;Best Val SNR:           </span><span class="s1">{</span><span class="s0">max</span><span class="s2">(</span><span class="s0">val_snrs</span><span class="s2">)</span><span class="s1">:</span><span class="s5">.2f</span><span class="s1">} </span><span class="s5">dB&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;Best Val PSNR:          </span><span class="s1">{</span><span class="s0">max</span><span class="s2">(</span><span class="s0">val_psnrs</span><span class="s2">)</span><span class="s1">:</span><span class="s5">.2f</span><span class="s1">} </span><span class="s5">dB&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;Final Model Saved:      </span><span class="s1">{</span><span class="s0">final_model_path</span><span class="s1">}</span><span class="s5">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;=&quot; </span><span class="s2">* </span><span class="s4">80</span><span class="s2">)</span></pre>
+</body>
+</html>

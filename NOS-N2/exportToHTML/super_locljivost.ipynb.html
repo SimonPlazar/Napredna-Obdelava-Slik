@@ -1,0 +1,278 @@
+<html>
+<head>
+<title>super_locljivost.ipynb</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #bcbec4;}
+.s1 { color: #cf8e6d;}
+.s2 { color: #bcbec4;}
+.s3 { color: #7a7e85;}
+.s4 { color: #2aacb8;}
+.s5 { color: #6aab73;}
+.s6 { color: #5f826b; font-style: italic;}
+.ls0 { height: 1px; border-width: 0; color: #43454a; background-color:#43454a}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+super_locljivost.ipynb</font>
+</center></td></tr></table>
+<pre><span class="s0">#%% 
+</span><span class="s1">from </span><span class="s0">pathlib </span><span class="s1">import </span><span class="s0">Path</span>
+<span class="s1">import </span><span class="s0">time</span>
+
+<span class="s1">from </span><span class="s0">torch </span><span class="s1">import </span><span class="s0">nn</span>
+
+<span class="s1">from </span><span class="s0">Model </span><span class="s1">import </span><span class="s0">SuperResolution</span><span class="s2">, </span><span class="s0">T91TrainDataset</span><span class="s2">, </span><span class="s0">TestDataset</span>
+<span class="s1">from </span><span class="s0">Model </span><span class="s1">import </span><span class="s0">calculate_psnr</span><span class="s2">, </span><span class="s0">calculate_ssim</span>
+
+<span class="s1">from </span><span class="s0">Helper </span><span class="s1">import </span><span class="s2">*</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s3"># 2X SCALING MODEL</span>
+
+<span class="s3"># ===== Hiperparametri učenja =====</span>
+
+<span class="s0">SCALE </span><span class="s2">= </span><span class="s4">3</span>
+<span class="s0">PATCH_SIZE </span><span class="s2">= </span><span class="s4">33</span>
+<span class="s0">BATCH_SIZE </span><span class="s2">= </span><span class="s4">256</span>
+<span class="s0">NUM_EPOCHS </span><span class="s2">= </span><span class="s4">5000</span>
+<span class="s0">LEARNING_RATE </span><span class="s2">= </span><span class="s4">1e-5</span>
+<span class="s0">MIN_PATCHES </span><span class="s2">= ((</span><span class="s4">1000 </span><span class="s2">+ </span><span class="s0">BATCH_SIZE </span><span class="s2">- </span><span class="s4">1</span><span class="s2">) // </span><span class="s0">BATCH_SIZE</span><span class="s2">) * </span><span class="s0">BATCH_SIZE</span>
+
+<span class="s0">T91_DIR </span><span class="s2">= </span><span class="s0">os</span><span class="s2">.</span><span class="s0">path</span><span class="s2">.</span><span class="s0">join</span><span class="s2">(</span><span class="s5">&quot;datasets&quot;</span><span class="s2">, </span><span class="s5">&quot;T91&quot;</span><span class="s2">)  </span><span class="s3"># Train dataset directory</span>
+<span class="s3"># SET_DIR = os.path.join(&quot;datasets&quot;, &quot;Set5&quot;) # Test dataset directory (for validation)</span>
+<span class="s0">SET_DIR </span><span class="s2">= </span><span class="s0">os</span><span class="s2">.</span><span class="s0">path</span><span class="s2">.</span><span class="s0">join</span><span class="s2">(</span><span class="s5">&quot;datasets&quot;</span><span class="s2">, </span><span class="s5">&quot;Set14&quot;</span><span class="s2">)  </span><span class="s3"># Test dataset directory (for validation)</span>
+
+<span class="s3"># Training configuration</span>
+<span class="s0">VAL_INTERVAL </span><span class="s2">= </span><span class="s4">50  </span><span class="s3"># Validate every N epochs</span>
+<span class="s0">SAVE_INTERVAL </span><span class="s2">= </span><span class="s4">100  </span><span class="s3"># Save checkpoint every N epochs</span>
+<span class="s0">LOG_INTERVAL </span><span class="s2">= </span><span class="s4">20  </span><span class="s3"># Log training loss every N epochs</span>
+
+<span class="s0">device </span><span class="s2">= </span><span class="s5">&quot;cuda&quot; </span><span class="s1">if </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">cuda</span><span class="s2">.</span><span class="s0">is_available</span><span class="s2">() </span><span class="s1">else </span><span class="s5">&quot;cpu&quot;</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;Using device:&quot;</span><span class="s2">, </span><span class="s0">device</span><span class="s2">)</span>
+
+<span class="s3"># Initialize model</span>
+<span class="s0">model </span><span class="s2">= </span><span class="s0">SuperResolution</span><span class="s2">().</span><span class="s0">to</span><span class="s2">(</span><span class="s0">device</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;Model parameters: </span><span class="s1">{</span><span class="s0">sum</span><span class="s2">(</span><span class="s0">p</span><span class="s2">.</span><span class="s0">numel</span><span class="s2">() </span><span class="s1">for </span><span class="s0">p </span><span class="s1">in </span><span class="s0">model</span><span class="s2">.</span><span class="s0">parameters</span><span class="s2">())</span><span class="s1">:</span><span class="s5">,</span><span class="s1">}</span><span class="s5">&quot;</span><span class="s2">)</span>
+
+<span class="s3"># Loss and optimizer</span>
+<span class="s0">criterion </span><span class="s2">= </span><span class="s0">nn</span><span class="s2">.</span><span class="s0">MSELoss</span><span class="s2">()</span>
+<span class="s0">optimizer </span><span class="s2">= </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">optim</span><span class="s2">.</span><span class="s0">Adam</span><span class="s2">(</span>
+    <span class="s0">model</span><span class="s2">.</span><span class="s0">parameters</span><span class="s2">(),</span>
+    <span class="s0">lr</span><span class="s2">=</span><span class="s0">LEARNING_RATE</span>
+<span class="s2">)</span>
+
+<span class="s3"># Learning rate scheduler</span>
+<span class="s0">scheduler </span><span class="s2">= </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">optim</span><span class="s2">.</span><span class="s0">lr_scheduler</span><span class="s2">.</span><span class="s0">ReduceLROnPlateau</span><span class="s2">(</span>
+    <span class="s0">optimizer</span><span class="s2">,</span>
+    <span class="s0">mode</span><span class="s2">=</span><span class="s5">'min'</span><span class="s2">,</span>
+    <span class="s0">factor</span><span class="s2">=</span><span class="s4">0.5</span><span class="s2">,</span>
+    <span class="s0">patience</span><span class="s2">=</span><span class="s4">100</span>
+<span class="s2">)</span>
+
+<span class="s3"># Training dataset</span>
+<span class="s0">train_dataset </span><span class="s2">= </span><span class="s0">T91TrainDataset</span><span class="s2">(</span>
+    <span class="s0">dataset_dir</span><span class="s2">=</span><span class="s0">T91_DIR</span><span class="s2">,</span>
+    <span class="s0">scale_factor</span><span class="s2">=</span><span class="s0">SCALE</span><span class="s2">,</span>
+    <span class="s0">patch_size</span><span class="s2">=</span><span class="s0">PATCH_SIZE</span><span class="s2">,</span>
+    <span class="s0">min_patches</span><span class="s2">=</span><span class="s0">MIN_PATCHES</span>
+<span class="s2">)</span>
+<span class="s0">train_loader </span><span class="s2">= </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">utils</span><span class="s2">.</span><span class="s0">data</span><span class="s2">.</span><span class="s0">DataLoader</span><span class="s2">(</span>
+    <span class="s0">dataset</span><span class="s2">=</span><span class="s0">train_dataset</span><span class="s2">,</span>
+    <span class="s0">batch_size</span><span class="s2">=</span><span class="s0">BATCH_SIZE</span><span class="s2">,</span>
+    <span class="s0">shuffle</span><span class="s2">=</span><span class="s1">True</span><span class="s2">,</span>
+    <span class="s0">num_workers</span><span class="s2">=</span><span class="s4">0</span><span class="s2">,</span>
+    <span class="s0">pin_memory</span><span class="s2">=</span><span class="s1">True</span><span class="s2">,</span>
+    <span class="s0">drop_last</span><span class="s2">=</span><span class="s1">True</span>
+<span class="s2">)</span>
+
+<span class="s3"># Validation dataset</span>
+<span class="s0">val_dataset </span><span class="s2">= </span><span class="s0">TestDataset</span><span class="s2">(</span>
+    <span class="s0">test_dir</span><span class="s2">=</span><span class="s0">SET_DIR</span><span class="s2">,</span>
+    <span class="s0">scale_factor</span><span class="s2">=</span><span class="s0">SCALE</span>
+<span class="s2">)</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;Training on </span><span class="s1">{</span><span class="s0">len</span><span class="s2">(</span><span class="s0">train_dataset</span><span class="s2">.</span><span class="s0">image_paths</span><span class="s2">)</span><span class="s1">} </span><span class="s5">images (</span><span class="s1">{</span><span class="s0">len</span><span class="s2">(</span><span class="s0">train_loader</span><span class="s2">)</span><span class="s1">} </span><span class="s5">batches per epoch)&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;Validation on </span><span class="s1">{</span><span class="s0">len</span><span class="s2">(</span><span class="s0">val_dataset</span><span class="s2">)</span><span class="s1">} </span><span class="s5">images&quot;</span><span class="s2">)</span>
+
+<hr class="ls0"><span class="s0">#%% 
+</span><span class="s3"># Setup checkpoint directory</span>
+
+<span class="s0">checkpoint_dir </span><span class="s2">= </span><span class="s0">Path</span><span class="s2">(</span><span class="s5">f&quot;./checkpoints_x</span><span class="s1">{</span><span class="s0">SCALE</span><span class="s1">}</span><span class="s5">&quot;</span><span class="s2">)</span>
+<span class="s0">checkpoint_dir</span><span class="s2">.</span><span class="s0">mkdir</span><span class="s2">(</span><span class="s0">exist_ok</span><span class="s2">=</span><span class="s1">True</span><span class="s2">)</span>
+
+<span class="s3"># Load checkpoint if exists</span>
+<span class="s0">checkpoint </span><span class="s2">= </span><span class="s0">load_checkpoint_generic</span><span class="s2">(</span><span class="s0">checkpoint_dir</span><span class="s2">, </span><span class="s0">device</span><span class="s2">)</span>
+
+<span class="s3"># Initialize tracking variables</span>
+<span class="s0">train_losses </span><span class="s2">= []</span>
+<span class="s0">val_losses </span><span class="s2">= []</span>
+<span class="s0">val_psnrs </span><span class="s2">= []</span>
+<span class="s0">val_ssims </span><span class="s2">= []</span>
+<span class="s0">epochs_log </span><span class="s2">= []</span>
+<span class="s0">start_epoch </span><span class="s2">= </span><span class="s4">1</span>
+
+<span class="s1">if </span><span class="s0">checkpoint</span><span class="s2">:</span>
+    <span class="s0">model</span><span class="s2">.</span><span class="s0">load_state_dict</span><span class="s2">(</span><span class="s0">checkpoint</span><span class="s2">[</span><span class="s5">'model_state_dict'</span><span class="s2">])</span>
+    <span class="s0">optimizer</span><span class="s2">.</span><span class="s0">load_state_dict</span><span class="s2">(</span><span class="s0">checkpoint</span><span class="s2">[</span><span class="s5">'optimizer_state_dict'</span><span class="s2">])</span>
+    <span class="s1">if </span><span class="s5">'scheduler_state_dict' </span><span class="s1">in </span><span class="s0">checkpoint</span><span class="s2">:</span>
+        <span class="s0">scheduler</span><span class="s2">.</span><span class="s0">load_state_dict</span><span class="s2">(</span><span class="s0">checkpoint</span><span class="s2">[</span><span class="s5">'scheduler_state_dict'</span><span class="s2">])</span>
+    <span class="s0">start_epoch </span><span class="s2">= </span><span class="s0">checkpoint</span><span class="s2">.</span><span class="s0">get</span><span class="s2">(</span><span class="s5">'epoch'</span><span class="s2">, </span><span class="s4">0</span><span class="s2">) + </span><span class="s4">1</span>
+    <span class="s0">train_losses </span><span class="s2">= </span><span class="s0">checkpoint</span><span class="s2">.</span><span class="s0">get</span><span class="s2">(</span><span class="s5">'train_losses'</span><span class="s2">, [])</span>
+    <span class="s0">val_losses </span><span class="s2">= </span><span class="s0">checkpoint</span><span class="s2">.</span><span class="s0">get</span><span class="s2">(</span><span class="s5">'val_losses'</span><span class="s2">, [])</span>
+    <span class="s0">val_psnrs </span><span class="s2">= </span><span class="s0">checkpoint</span><span class="s2">.</span><span class="s0">get</span><span class="s2">(</span><span class="s5">'val_psnrs'</span><span class="s2">, [])</span>
+    <span class="s0">val_ssims </span><span class="s2">= </span><span class="s0">checkpoint</span><span class="s2">.</span><span class="s0">get</span><span class="s2">(</span><span class="s5">'val_ssims'</span><span class="s2">, [])</span>
+    <span class="s0">epochs_log </span><span class="s2">= </span><span class="s0">checkpoint</span><span class="s2">.</span><span class="s0">get</span><span class="s2">(</span><span class="s5">'epochs_log'</span><span class="s2">, [])</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;Resuming training from epoch </span><span class="s1">{</span><span class="s0">start_epoch</span><span class="s1">}</span><span class="s5">&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;Loaded history: </span><span class="s1">{</span><span class="s0">len</span><span class="s2">(</span><span class="s0">val_losses</span><span class="s2">)</span><span class="s1">} </span><span class="s5">validation points&quot;</span><span class="s2">)</span>
+<span class="s1">else</span><span class="s2">:</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;No checkpoint found, starting fresh training.&quot;</span><span class="s2">)</span>
+
+<span class="s0">best_val_loss </span><span class="s2">= </span><span class="s0">checkpoint</span><span class="s2">.</span><span class="s0">get</span><span class="s2">(</span><span class="s5">'best_val_loss'</span><span class="s2">, </span><span class="s0">float</span><span class="s2">(</span><span class="s5">'inf'</span><span class="s2">)) </span><span class="s1">if </span><span class="s0">checkpoint </span><span class="s1">else </span><span class="s0">float</span><span class="s2">(</span><span class="s5">'inf'</span><span class="s2">)</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;</span><span class="s1">\n</span><span class="s5">Starting training from epoch </span><span class="s1">{</span><span class="s0">start_epoch</span><span class="s1">} </span><span class="s5">to </span><span class="s1">{</span><span class="s0">NUM_EPOCHS</span><span class="s1">}</span><span class="s5">...&quot;</span><span class="s2">)</span>
+<hr class="ls0"><span class="s0">#%% 
+</span><span class="s1">def </span><span class="s0">validate_model</span><span class="s2">(</span><span class="s0">model</span><span class="s2">, </span><span class="s0">val_dataset</span><span class="s2">, </span><span class="s0">device</span><span class="s2">):</span>
+    <span class="s6">&quot;&quot;&quot;Run validation on test dataset&quot;&quot;&quot;</span>
+    <span class="s0">model</span><span class="s2">.</span><span class="s0">eval</span><span class="s2">()</span>
+    <span class="s0">total_loss </span><span class="s2">= </span><span class="s4">0.0</span>
+    <span class="s0">total_psnr </span><span class="s2">= </span><span class="s4">0.0</span>
+    <span class="s0">total_ssim </span><span class="s2">= </span><span class="s4">0.0</span>
+
+    <span class="s1">with </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">no_grad</span><span class="s2">():</span>
+        <span class="s1">for </span><span class="s0">idx </span><span class="s1">in </span><span class="s0">range</span><span class="s2">(</span><span class="s0">len</span><span class="s2">(</span><span class="s0">val_dataset</span><span class="s2">)):</span>
+            <span class="s0">lr_ycbcr</span><span class="s2">, </span><span class="s0">hr_ycbcr </span><span class="s2">= </span><span class="s0">val_dataset</span><span class="s2">[</span><span class="s0">idx</span><span class="s2">]</span>
+
+            <span class="s3"># Extract Y channel</span>
+            <span class="s0">lr_y </span><span class="s2">= </span><span class="s0">lr_ycbcr</span><span class="s2">[:, :, </span><span class="s4">0</span><span class="s2">]</span>
+            <span class="s0">hr_y </span><span class="s2">= </span><span class="s0">hr_ycbcr</span><span class="s2">[:, :, </span><span class="s4">0</span><span class="s2">]</span>
+
+            <span class="s3"># Convert to tensor [1, 1, H, W]</span>
+            <span class="s0">lr_tensor </span><span class="s2">= </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">from_numpy</span><span class="s2">(</span><span class="s0">lr_y</span><span class="s2">).</span><span class="s0">unsqueeze</span><span class="s2">(</span><span class="s4">0</span><span class="s2">).</span><span class="s0">unsqueeze</span><span class="s2">(</span><span class="s4">0</span><span class="s2">).</span><span class="s0">to</span><span class="s2">(</span><span class="s0">device</span><span class="s2">)</span>
+            <span class="s0">hr_tensor </span><span class="s2">= </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">from_numpy</span><span class="s2">(</span><span class="s0">hr_y</span><span class="s2">).</span><span class="s0">unsqueeze</span><span class="s2">(</span><span class="s4">0</span><span class="s2">).</span><span class="s0">unsqueeze</span><span class="s2">(</span><span class="s4">0</span><span class="s2">).</span><span class="s0">to</span><span class="s2">(</span><span class="s0">device</span><span class="s2">)</span>
+
+            <span class="s3"># Forward pass</span>
+            <span class="s0">sr_tensor </span><span class="s2">= </span><span class="s0">model</span><span class="s2">(</span><span class="s0">lr_tensor</span><span class="s2">)</span>
+
+            <span class="s3"># Calculate loss</span>
+            <span class="s0">loss </span><span class="s2">= </span><span class="s0">criterion</span><span class="s2">(</span><span class="s0">sr_tensor</span><span class="s2">, </span><span class="s0">hr_tensor</span><span class="s2">)</span>
+            <span class="s0">total_loss </span><span class="s2">+= </span><span class="s0">loss</span><span class="s2">.</span><span class="s0">item</span><span class="s2">()</span>
+
+            <span class="s3"># Move to CPU once for both metrics</span>
+            <span class="s0">hr_cpu </span><span class="s2">= </span><span class="s0">hr_tensor</span><span class="s2">.</span><span class="s0">cpu</span><span class="s2">()</span>
+            <span class="s0">sr_cpu </span><span class="s2">= </span><span class="s0">sr_tensor</span><span class="s2">.</span><span class="s0">cpu</span><span class="s2">()</span>
+
+            <span class="s3"># Calculate PSNR and SSIM</span>
+            <span class="s0">psnr </span><span class="s2">= </span><span class="s0">calculate_psnr</span><span class="s2">(</span><span class="s0">hr_cpu</span><span class="s2">, </span><span class="s0">sr_cpu</span><span class="s2">)</span>
+            <span class="s0">ssim </span><span class="s2">= </span><span class="s0">calculate_ssim</span><span class="s2">(</span><span class="s0">hr_cpu</span><span class="s2">, </span><span class="s0">sr_cpu</span><span class="s2">)</span>
+
+            <span class="s0">total_psnr </span><span class="s2">+= </span><span class="s0">psnr</span>
+            <span class="s0">total_ssim </span><span class="s2">+= </span><span class="s0">ssim</span>
+
+    <span class="s0">avg_loss </span><span class="s2">= </span><span class="s0">total_loss </span><span class="s2">/ </span><span class="s0">len</span><span class="s2">(</span><span class="s0">val_dataset</span><span class="s2">)</span>
+    <span class="s0">avg_psnr </span><span class="s2">= </span><span class="s0">total_psnr </span><span class="s2">/ </span><span class="s0">len</span><span class="s2">(</span><span class="s0">val_dataset</span><span class="s2">)</span>
+    <span class="s0">avg_ssim </span><span class="s2">= </span><span class="s0">total_ssim </span><span class="s2">/ </span><span class="s0">len</span><span class="s2">(</span><span class="s0">val_dataset</span><span class="s2">)</span>
+
+    <span class="s0">model</span><span class="s2">.</span><span class="s0">train</span><span class="s2">()</span>
+    <span class="s1">return </span><span class="s0">avg_loss</span><span class="s2">, </span><span class="s0">avg_psnr</span><span class="s2">, </span><span class="s0">avg_ssim</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s3"># Training loop</span>
+
+<span class="s3"># Time tracking</span>
+<span class="s0">start_time </span><span class="s2">= </span><span class="s0">time</span><span class="s2">.</span><span class="s0">time</span><span class="s2">()</span>
+<span class="s0">running_loss </span><span class="s2">= </span><span class="s4">0.0</span>
+
+<span class="s0">model</span><span class="s2">.</span><span class="s0">train</span><span class="s2">()</span>
+
+<span class="s1">for </span><span class="s0">epoch </span><span class="s1">in </span><span class="s0">range</span><span class="s2">(</span><span class="s0">start_epoch</span><span class="s2">, </span><span class="s0">NUM_EPOCHS </span><span class="s2">+ </span><span class="s4">1</span><span class="s2">):</span>
+    <span class="s0">epoch_loss </span><span class="s2">= </span><span class="s4">0.0</span>
+
+    <span class="s1">for </span><span class="s0">y_lr</span><span class="s2">, </span><span class="s0">y_hr </span><span class="s1">in </span><span class="s0">train_loader</span><span class="s2">:</span>
+        <span class="s3"># Move to device</span>
+        <span class="s0">y_lr </span><span class="s2">= </span><span class="s0">y_lr</span><span class="s2">.</span><span class="s0">to</span><span class="s2">(</span><span class="s0">device</span><span class="s2">, </span><span class="s0">non_blocking</span><span class="s2">=</span><span class="s1">True</span><span class="s2">)</span>
+        <span class="s0">y_hr </span><span class="s2">= </span><span class="s0">y_hr</span><span class="s2">.</span><span class="s0">to</span><span class="s2">(</span><span class="s0">device</span><span class="s2">, </span><span class="s0">non_blocking</span><span class="s2">=</span><span class="s1">True</span><span class="s2">)</span>
+
+        <span class="s3"># Forward pass</span>
+        <span class="s0">optimizer</span><span class="s2">.</span><span class="s0">zero_grad</span><span class="s2">()</span>
+        <span class="s0">y_pred </span><span class="s2">= </span><span class="s0">model</span><span class="s2">(</span><span class="s0">y_lr</span><span class="s2">)</span>
+
+        <span class="s3"># Compute loss</span>
+        <span class="s0">loss </span><span class="s2">= </span><span class="s0">criterion</span><span class="s2">(</span><span class="s0">y_pred</span><span class="s2">, </span><span class="s0">y_hr</span><span class="s2">)</span>
+
+        <span class="s3"># Backward pass</span>
+        <span class="s0">loss</span><span class="s2">.</span><span class="s0">backward</span><span class="s2">()</span>
+        <span class="s0">optimizer</span><span class="s2">.</span><span class="s0">step</span><span class="s2">()</span>
+
+        <span class="s0">epoch_loss </span><span class="s2">+= </span><span class="s0">loss</span><span class="s2">.</span><span class="s0">item</span><span class="s2">()</span>
+
+    <span class="s3"># Average loss for epoch</span>
+    <span class="s0">avg_epoch_loss </span><span class="s2">= </span><span class="s0">epoch_loss </span><span class="s2">/ </span><span class="s0">len</span><span class="s2">(</span><span class="s0">train_loader</span><span class="s2">)</span>
+    <span class="s0">train_losses</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">avg_epoch_loss</span><span class="s2">)</span>
+
+    <span class="s3"># Log progress</span>
+    <span class="s1">if </span><span class="s0">epoch </span><span class="s2">% </span><span class="s0">LOG_INTERVAL </span><span class="s2">== </span><span class="s4">0</span><span class="s2">:</span>
+        <span class="s0">elapsed </span><span class="s2">= </span><span class="s0">time</span><span class="s2">.</span><span class="s0">time</span><span class="s2">() - </span><span class="s0">start_time</span>
+        <span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;Epoch </span><span class="s1">{</span><span class="s0">epoch</span><span class="s1">:</span><span class="s5">4d</span><span class="s1">}</span><span class="s5">/</span><span class="s1">{</span><span class="s0">NUM_EPOCHS</span><span class="s1">} </span><span class="s5">| Train Loss: </span><span class="s1">{</span><span class="s0">avg_epoch_loss</span><span class="s1">:</span><span class="s5">.6f</span><span class="s1">} </span><span class="s5">| Time: </span><span class="s1">{</span><span class="s0">elapsed</span><span class="s1">:</span><span class="s5">.2f</span><span class="s1">}</span><span class="s5">s&quot;</span><span class="s2">)</span>
+        <span class="s0">start_time </span><span class="s2">= </span><span class="s0">time</span><span class="s2">.</span><span class="s0">time</span><span class="s2">()</span>
+
+    <span class="s3"># Validation</span>
+    <span class="s1">if </span><span class="s0">epoch </span><span class="s2">% </span><span class="s0">VAL_INTERVAL </span><span class="s2">== </span><span class="s4">0</span><span class="s2">:</span>
+        <span class="s0">val_loss</span><span class="s2">, </span><span class="s0">val_psnr</span><span class="s2">, </span><span class="s0">val_ssim </span><span class="s2">= </span><span class="s0">validate_model</span><span class="s2">(</span><span class="s0">model</span><span class="s2">, </span><span class="s0">val_dataset</span><span class="s2">, </span><span class="s0">device</span><span class="s2">)</span>
+
+        <span class="s0">val_losses</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">val_loss</span><span class="s2">)</span>
+        <span class="s0">val_psnrs</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">val_psnr</span><span class="s2">)</span>
+        <span class="s0">val_ssims</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">val_ssim</span><span class="s2">)</span>
+        <span class="s0">epochs_log</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">epoch</span><span class="s2">)</span>
+
+        <span class="s0">current_lr </span><span class="s2">= </span><span class="s0">optimizer</span><span class="s2">.</span><span class="s0">param_groups</span><span class="s2">[</span><span class="s4">0</span><span class="s2">][</span><span class="s5">'lr'</span><span class="s2">]</span>
+        <span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;&gt;&gt;&gt; Validation at epoch </span><span class="s1">{</span><span class="s0">epoch</span><span class="s1">:</span><span class="s5">4d</span><span class="s1">} </span><span class="s5">| Val Loss: </span><span class="s1">{</span><span class="s0">val_loss</span><span class="s1">:</span><span class="s5">.6f</span><span class="s1">} </span><span class="s5">| &quot;</span>
+              <span class="s5">f&quot;PSNR: </span><span class="s1">{</span><span class="s0">val_psnr</span><span class="s1">:</span><span class="s5">.4f</span><span class="s1">} </span><span class="s5">dB | SSIM: </span><span class="s1">{</span><span class="s0">val_ssim</span><span class="s1">:</span><span class="s5">.4f</span><span class="s1">} </span><span class="s5">| LR: </span><span class="s1">{</span><span class="s0">current_lr</span><span class="s1">:</span><span class="s5">.6f</span><span class="s1">}</span><span class="s5">&quot;</span><span class="s2">)</span>
+
+        <span class="s0">scheduler</span><span class="s2">.</span><span class="s0">step</span><span class="s2">(</span><span class="s0">val_loss</span><span class="s2">)</span>
+
+        <span class="s3"># Save best model</span>
+        <span class="s1">if </span><span class="s0">val_loss </span><span class="s2">&lt; </span><span class="s0">best_val_loss</span><span class="s2">:</span>
+            <span class="s0">best_val_loss </span><span class="s2">= </span><span class="s0">val_loss</span>
+            <span class="s0">torch</span><span class="s2">.</span><span class="s0">save</span><span class="s2">({</span>
+                <span class="s5">'epoch'</span><span class="s2">: </span><span class="s0">epoch</span><span class="s2">,</span>
+                <span class="s5">'model_state_dict'</span><span class="s2">: </span><span class="s0">model</span><span class="s2">.</span><span class="s0">state_dict</span><span class="s2">(),</span>
+                <span class="s5">'optimizer_state_dict'</span><span class="s2">: </span><span class="s0">optimizer</span><span class="s2">.</span><span class="s0">state_dict</span><span class="s2">(),</span>
+                <span class="s5">'scheduler_state_dict'</span><span class="s2">: </span><span class="s0">scheduler</span><span class="s2">.</span><span class="s0">state_dict</span><span class="s2">(),</span>
+                <span class="s5">'scale'</span><span class="s2">: </span><span class="s0">SCALE</span><span class="s2">,</span>
+                <span class="s5">'val_loss'</span><span class="s2">: </span><span class="s0">val_loss</span><span class="s2">,</span>
+                <span class="s5">'val_psnr'</span><span class="s2">: </span><span class="s0">val_psnr</span><span class="s2">,</span>
+                <span class="s5">'val_ssim'</span><span class="s2">: </span><span class="s0">val_ssim</span><span class="s2">,</span>
+                <span class="s5">'lr'</span><span class="s2">: </span><span class="s0">current_lr</span>
+            <span class="s2">}, </span><span class="s0">checkpoint_dir </span><span class="s2">/ </span><span class="s5">'best_model.pth'</span><span class="s2">)</span>
+            <span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;✓ Saved best model (Loss: </span><span class="s1">{</span><span class="s0">val_loss</span><span class="s1">:</span><span class="s5">.6f</span><span class="s1">}</span><span class="s5">, PSNR: </span><span class="s1">{</span><span class="s0">val_psnr</span><span class="s1">:</span><span class="s5">.4f</span><span class="s1">} </span><span class="s5">dB, SSIM: </span><span class="s1">{</span><span class="s0">val_ssim</span><span class="s1">:</span><span class="s5">.4f</span><span class="s1">}</span><span class="s5">)&quot;</span><span class="s2">)</span>
+
+    <span class="s3"># Save checkpoint</span>
+    <span class="s1">if </span><span class="s0">epoch </span><span class="s2">% </span><span class="s0">SAVE_INTERVAL </span><span class="s2">== </span><span class="s4">0</span><span class="s2">:</span>
+        <span class="s0">save_checkpoint_generic</span><span class="s2">(</span>
+            <span class="s0">checkpoint_dir</span><span class="s2">,</span>
+            <span class="s0">epoch</span><span class="s2">,</span>
+            <span class="s2">{</span>
+                <span class="s5">'epoch'</span><span class="s2">: </span><span class="s0">epoch</span><span class="s2">,</span>
+                <span class="s5">'model_state_dict'</span><span class="s2">: </span><span class="s0">model</span><span class="s2">.</span><span class="s0">state_dict</span><span class="s2">(),</span>
+                <span class="s5">'optimizer_state_dict'</span><span class="s2">: </span><span class="s0">optimizer</span><span class="s2">.</span><span class="s0">state_dict</span><span class="s2">(),</span>
+                <span class="s5">'scheduler_state_dict'</span><span class="s2">: </span><span class="s0">scheduler</span><span class="s2">.</span><span class="s0">state_dict</span><span class="s2">(),</span>
+                <span class="s5">'scale'</span><span class="s2">: </span><span class="s0">SCALE</span><span class="s2">,</span>
+                <span class="s5">'lr'</span><span class="s2">: </span><span class="s0">optimizer</span><span class="s2">.</span><span class="s0">param_groups</span><span class="s2">[</span><span class="s4">0</span><span class="s2">][</span><span class="s5">'lr'</span><span class="s2">],</span>
+                <span class="s5">'best_val_loss'</span><span class="s2">: </span><span class="s0">best_val_loss</span><span class="s2">,</span>
+                <span class="s5">'train_losses'</span><span class="s2">: </span><span class="s0">train_losses</span><span class="s2">,</span>
+                <span class="s5">'val_losses'</span><span class="s2">: </span><span class="s0">val_losses</span><span class="s2">,</span>
+                <span class="s5">'val_psnrs'</span><span class="s2">: </span><span class="s0">val_psnrs</span><span class="s2">,</span>
+                <span class="s5">'val_ssims'</span><span class="s2">: </span><span class="s0">val_ssims</span><span class="s2">,</span>
+                <span class="s5">'epochs_log'</span><span class="s2">: </span><span class="s0">epochs_log</span>
+            <span class="s2">},</span>
+            <span class="s0">max_checkpoints</span><span class="s2">=</span><span class="s4">5</span>
+        <span class="s2">)</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;</span><span class="s1">\n</span><span class="s5">🎉 Training completed!&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;📊 Final statistics:&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;  - Best validation loss: </span><span class="s1">{</span><span class="s0">best_val_loss</span><span class="s1">:</span><span class="s5">.6f</span><span class="s1">}</span><span class="s5">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;  - Total validation points: </span><span class="s1">{</span><span class="s0">len</span><span class="s2">(</span><span class="s0">val_losses</span><span class="s2">)</span><span class="s1">}</span><span class="s5">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;  - Total training epochs: </span><span class="s1">{</span><span class="s0">len</span><span class="s2">(</span><span class="s0">train_losses</span><span class="s2">)</span><span class="s1">}</span><span class="s5">&quot;</span><span class="s2">)</span>
+</pre>
+</body>
+</html>

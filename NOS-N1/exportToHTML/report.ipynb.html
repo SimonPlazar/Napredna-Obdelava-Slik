@@ -1,0 +1,795 @@
+<html>
+<head>
+<title>report.ipynb</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #bcbec4;}
+.s1 { color: #cf8e6d;}
+.s2 { color: #bcbec4;}
+.s3 { color: #2aacb8;}
+.s4 { color: #6aab73;}
+.s5 { color: #7a7e85;}
+.s6 { color: #5f826b; font-style: italic;}
+.ls0 { height: 1px; border-width: 0; color: #43454a; background-color:#43454a}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+report.ipynb</font>
+</center></td></tr></table>
+<pre><span class="s0">#%% 
+</span><span class="s1">import </span><span class="s0">numpy </span><span class="s1">as </span><span class="s0">np</span>
+<span class="s1">import </span><span class="s0">matplotlib</span><span class="s2">.</span><span class="s0">pyplot </span><span class="s1">as </span><span class="s0">plt</span>
+
+<span class="s1">import </span><span class="s0">torch</span>
+
+<span class="s1">from </span><span class="s0">Generator </span><span class="s1">import </span><span class="s0">generate_image</span>
+<span class="s1">from </span><span class="s0">Generator </span><span class="s1">import </span><span class="s0">noise_add</span><span class="s2">, </span><span class="s0">noise_mul</span><hr class="ls0"><span class="s0">#%% 
+images </span><span class="s2">= [</span><span class="s0">generate_image</span><span class="s2">(</span><span class="s3">256</span><span class="s2">, </span><span class="s3">256</span><span class="s2">, </span><span class="s3">5</span><span class="s2">, </span><span class="s3">0</span><span class="s2">, </span><span class="s3">0</span><span class="s2">, </span><span class="s3">0</span><span class="s2">) </span><span class="s1">for </span><span class="s0">_ </span><span class="s1">in </span><span class="s0">range</span><span class="s2">(</span><span class="s3">5</span><span class="s2">)]</span>
+
+<span class="s0">fig</span><span class="s2">, </span><span class="s0">ax_table </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s3">1</span><span class="s2">, </span><span class="s3">5</span><span class="s2">, </span><span class="s0">figsize</span><span class="s2">=(</span><span class="s3">15</span><span class="s2">, </span><span class="s3">3</span><span class="s2">), </span><span class="s0">facecolor</span><span class="s2">=</span><span class="s4">'none'</span><span class="s2">)</span>
+<span class="s1">for </span><span class="s0">i</span><span class="s2">, </span><span class="s0">ax </span><span class="s1">in </span><span class="s0">enumerate</span><span class="s2">(</span><span class="s0">ax_table</span><span class="s2">.</span><span class="s0">ravel</span><span class="s2">()):</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">images</span><span class="s2">[</span><span class="s0">i</span><span class="s2">])</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_axis_off</span><span class="s2">()</span><hr class="ls0"><span class="s0">#%% 
+images </span><span class="s2">= [</span><span class="s0">generate_image</span><span class="s2">(</span><span class="s3">256</span><span class="s2">, </span><span class="s3">256</span><span class="s2">, </span><span class="s3">0</span><span class="s2">, </span><span class="s3">5</span><span class="s2">, </span><span class="s3">0</span><span class="s2">, </span><span class="s3">0</span><span class="s2">) </span><span class="s1">for </span><span class="s0">_ </span><span class="s1">in </span><span class="s0">range</span><span class="s2">(</span><span class="s3">5</span><span class="s2">)]</span>
+
+<span class="s0">fig</span><span class="s2">, </span><span class="s0">ax_table </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s3">1</span><span class="s2">, </span><span class="s3">5</span><span class="s2">, </span><span class="s0">figsize</span><span class="s2">=(</span><span class="s3">15</span><span class="s2">, </span><span class="s3">3</span><span class="s2">), </span><span class="s0">facecolor</span><span class="s2">=</span><span class="s4">'none'</span><span class="s2">)</span>
+<span class="s1">for </span><span class="s0">i</span><span class="s2">, </span><span class="s0">ax </span><span class="s1">in </span><span class="s0">enumerate</span><span class="s2">(</span><span class="s0">ax_table</span><span class="s2">.</span><span class="s0">ravel</span><span class="s2">()):</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">images</span><span class="s2">[</span><span class="s0">i</span><span class="s2">])</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_axis_off</span><span class="s2">()</span><hr class="ls0"><span class="s0">#%% 
+images </span><span class="s2">= [</span><span class="s0">generate_image</span><span class="s2">(</span><span class="s3">256</span><span class="s2">, </span><span class="s3">256</span><span class="s2">, </span><span class="s3">0</span><span class="s2">, </span><span class="s3">0</span><span class="s2">, </span><span class="s3">5</span><span class="s2">, </span><span class="s3">0</span><span class="s2">) </span><span class="s1">for </span><span class="s0">_ </span><span class="s1">in </span><span class="s0">range</span><span class="s2">(</span><span class="s3">5</span><span class="s2">)]</span>
+
+<span class="s0">fig</span><span class="s2">, </span><span class="s0">ax_table </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s3">1</span><span class="s2">, </span><span class="s3">5</span><span class="s2">, </span><span class="s0">figsize</span><span class="s2">=(</span><span class="s3">15</span><span class="s2">, </span><span class="s3">3</span><span class="s2">), </span><span class="s0">facecolor</span><span class="s2">=</span><span class="s4">'none'</span><span class="s2">)</span>
+<span class="s1">for </span><span class="s0">i</span><span class="s2">, </span><span class="s0">ax </span><span class="s1">in </span><span class="s0">enumerate</span><span class="s2">(</span><span class="s0">ax_table</span><span class="s2">.</span><span class="s0">ravel</span><span class="s2">()):</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">images</span><span class="s2">[</span><span class="s0">i</span><span class="s2">])</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_axis_off</span><span class="s2">()</span><hr class="ls0"><span class="s0">#%% 
+images </span><span class="s2">= [</span><span class="s0">generate_image</span><span class="s2">(</span><span class="s3">256</span><span class="s2">, </span><span class="s3">256</span><span class="s2">, </span><span class="s3">0</span><span class="s2">, </span><span class="s3">0</span><span class="s2">, </span><span class="s3">0</span><span class="s2">, </span><span class="s3">5</span><span class="s2">) </span><span class="s1">for </span><span class="s0">_ </span><span class="s1">in </span><span class="s0">range</span><span class="s2">(</span><span class="s3">5</span><span class="s2">)]</span>
+
+<span class="s0">fig</span><span class="s2">, </span><span class="s0">ax_table </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s3">1</span><span class="s2">, </span><span class="s3">5</span><span class="s2">, </span><span class="s0">figsize</span><span class="s2">=(</span><span class="s3">15</span><span class="s2">, </span><span class="s3">3</span><span class="s2">), </span><span class="s0">facecolor</span><span class="s2">=</span><span class="s4">'none'</span><span class="s2">)</span>
+<span class="s1">for </span><span class="s0">i</span><span class="s2">, </span><span class="s0">ax </span><span class="s1">in </span><span class="s0">enumerate</span><span class="s2">(</span><span class="s0">ax_table</span><span class="s2">.</span><span class="s0">ravel</span><span class="s2">()):</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">images</span><span class="s2">[</span><span class="s0">i</span><span class="s2">])</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_axis_off</span><span class="s2">()</span><hr class="ls0"><span class="s0">#%% 
+images </span><span class="s2">= [</span><span class="s0">generate_image</span><span class="s2">(</span><span class="s3">256</span><span class="s2">, </span><span class="s3">256</span><span class="s2">, </span><span class="s3">5</span><span class="s2">, </span><span class="s3">5</span><span class="s2">, </span><span class="s3">5</span><span class="s2">, </span><span class="s3">5</span><span class="s2">) </span><span class="s1">for </span><span class="s0">_ </span><span class="s1">in </span><span class="s0">range</span><span class="s2">(</span><span class="s3">5</span><span class="s2">)]</span>
+
+<span class="s0">fig</span><span class="s2">, </span><span class="s0">ax_table </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s3">1</span><span class="s2">, </span><span class="s3">5</span><span class="s2">, </span><span class="s0">figsize</span><span class="s2">=(</span><span class="s3">15</span><span class="s2">, </span><span class="s3">3</span><span class="s2">), </span><span class="s0">facecolor</span><span class="s2">=</span><span class="s4">'none'</span><span class="s2">)</span>
+<span class="s1">for </span><span class="s0">i</span><span class="s2">, </span><span class="s0">ax </span><span class="s1">in </span><span class="s0">enumerate</span><span class="s2">(</span><span class="s0">ax_table</span><span class="s2">.</span><span class="s0">ravel</span><span class="s2">()):</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">images</span><span class="s2">[</span><span class="s0">i</span><span class="s2">])</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_axis_off</span><span class="s2">()</span>
+<hr class="ls0"><span class="s0">#%% 
+</span><span class="s5"># noisy_images_additive = [noise_add(img, random.uniform(0.1, 0.3)) for img in images]</span>
+<span class="s0">noisy_images_additive </span><span class="s2">= [</span><span class="s0">noise_add</span><span class="s2">(</span><span class="s0">img</span><span class="s2">, </span><span class="s3">0.3</span><span class="s2">) </span><span class="s1">for </span><span class="s0">img </span><span class="s1">in </span><span class="s0">images</span><span class="s2">]</span>
+
+<span class="s0">fig</span><span class="s2">, </span><span class="s0">ax_table </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s3">1</span><span class="s2">, </span><span class="s3">5</span><span class="s2">, </span><span class="s0">figsize</span><span class="s2">=(</span><span class="s3">15</span><span class="s2">, </span><span class="s3">3</span><span class="s2">), </span><span class="s0">facecolor</span><span class="s2">=</span><span class="s4">'none'</span><span class="s2">)</span>
+<span class="s1">for </span><span class="s0">i</span><span class="s2">, </span><span class="s0">ax </span><span class="s1">in </span><span class="s0">enumerate</span><span class="s2">(</span><span class="s0">ax_table</span><span class="s2">.</span><span class="s0">ravel</span><span class="s2">()):</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">noisy_images_additive</span><span class="s2">[</span><span class="s0">i</span><span class="s2">])</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_axis_off</span><span class="s2">()</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s5"># noisy_images_multiplicative = [noise_mul(img, random.uniform(0.1, 0.3)) for img in images]</span>
+<span class="s0">noisy_images_multiplicative </span><span class="s2">= [</span><span class="s0">noise_mul</span><span class="s2">(</span><span class="s0">img</span><span class="s2">, </span><span class="s3">0.3</span><span class="s2">) </span><span class="s1">for </span><span class="s0">img </span><span class="s1">in </span><span class="s0">images</span><span class="s2">]</span>
+
+<span class="s0">fig</span><span class="s2">, </span><span class="s0">ax_table </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s3">1</span><span class="s2">, </span><span class="s3">5</span><span class="s2">, </span><span class="s0">figsize</span><span class="s2">=(</span><span class="s3">15</span><span class="s2">, </span><span class="s3">3</span><span class="s2">), </span><span class="s0">facecolor</span><span class="s2">=</span><span class="s4">'none'</span><span class="s2">)</span>
+<span class="s1">for </span><span class="s0">i</span><span class="s2">, </span><span class="s0">ax </span><span class="s1">in </span><span class="s0">enumerate</span><span class="s2">(</span><span class="s0">ax_table</span><span class="s2">.</span><span class="s0">ravel</span><span class="s2">()):</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">noisy_images_multiplicative</span><span class="s2">[</span><span class="s0">i</span><span class="s2">])</span>
+    <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_axis_off</span><span class="s2">()</span>
+<span class="s0">img </span><span class="s2">= </span><span class="s0">generate_image</span><span class="s2">(</span><span class="s3">256</span><span class="s2">, </span><span class="s3">256</span><span class="s2">, </span><span class="s3">5</span><span class="s2">, </span><span class="s3">5</span><span class="s2">, </span><span class="s3">5</span><span class="s2">, </span><span class="s3">5</span><span class="s2">)</span>
+<hr class="ls0"><span class="s0">#%% 
+noise_levels </span><span class="s2">= [</span><span class="s3">0.0</span><span class="s2">, </span><span class="s3">0.1</span><span class="s2">, </span><span class="s3">0.3</span><span class="s2">, </span><span class="s3">0.5</span><span class="s2">]</span>
+<span class="s0">titles </span><span class="s2">= [</span><span class="s4">'No Noise'</span><span class="s2">, </span><span class="s4">'Noise 0.1'</span><span class="s2">, </span><span class="s4">'Noise 0.3'</span><span class="s2">, </span><span class="s4">'Noise 0.5'</span><span class="s2">]</span>
+
+<span class="s0">fig</span><span class="s2">, </span><span class="s0">axes </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s3">2</span><span class="s2">, </span><span class="s3">4</span><span class="s2">, </span><span class="s0">figsize</span><span class="s2">=(</span><span class="s3">16</span><span class="s2">, </span><span class="s3">8</span><span class="s2">), </span><span class="s0">facecolor</span><span class="s2">=</span><span class="s4">'none'</span><span class="s2">)</span>
+<span class="s1">for </span><span class="s0">i</span><span class="s2">, </span><span class="s0">level </span><span class="s1">in </span><span class="s0">enumerate</span><span class="s2">(</span><span class="s0">noise_levels</span><span class="s2">):</span>
+    <span class="s1">if </span><span class="s0">level </span><span class="s2">== </span><span class="s3">0.0</span><span class="s2">:</span>
+        <span class="s0">axes</span><span class="s2">[</span><span class="s3">0</span><span class="s2">, </span><span class="s0">i</span><span class="s2">].</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">img</span><span class="s2">)</span>
+    <span class="s1">else</span><span class="s2">:</span>
+        <span class="s0">noisy </span><span class="s2">= </span><span class="s0">noise_add</span><span class="s2">(</span><span class="s0">img</span><span class="s2">, </span><span class="s0">level</span><span class="s2">)</span>
+        <span class="s0">axes</span><span class="s2">[</span><span class="s3">0</span><span class="s2">, </span><span class="s0">i</span><span class="s2">].</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">noisy</span><span class="s2">)</span>
+    <span class="s0">axes</span><span class="s2">[</span><span class="s3">0</span><span class="s2">, </span><span class="s0">i</span><span class="s2">].</span><span class="s0">set_title</span><span class="s2">(</span><span class="s4">f&quot;Additive: </span><span class="s1">{</span><span class="s0">titles</span><span class="s2">[</span><span class="s0">i</span><span class="s2">]</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">, </span><span class="s0">color</span><span class="s2">=</span><span class="s4">&quot;white&quot;</span><span class="s2">)</span>
+    <span class="s0">axes</span><span class="s2">[</span><span class="s3">0</span><span class="s2">, </span><span class="s0">i</span><span class="s2">].</span><span class="s0">set_axis_off</span><span class="s2">()</span>
+
+<span class="s1">for </span><span class="s0">i</span><span class="s2">, </span><span class="s0">level </span><span class="s1">in </span><span class="s0">enumerate</span><span class="s2">(</span><span class="s0">noise_levels</span><span class="s2">):</span>
+    <span class="s1">if </span><span class="s0">level </span><span class="s2">== </span><span class="s3">0.0</span><span class="s2">:</span>
+        <span class="s0">axes</span><span class="s2">[</span><span class="s3">1</span><span class="s2">, </span><span class="s0">i</span><span class="s2">].</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">img</span><span class="s2">)</span>
+    <span class="s1">else</span><span class="s2">:</span>
+        <span class="s0">noisy </span><span class="s2">= </span><span class="s0">noise_mul</span><span class="s2">(</span><span class="s0">img</span><span class="s2">, </span><span class="s0">level</span><span class="s2">)</span>
+        <span class="s0">axes</span><span class="s2">[</span><span class="s3">1</span><span class="s2">, </span><span class="s0">i</span><span class="s2">].</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">noisy</span><span class="s2">)</span>
+    <span class="s0">axes</span><span class="s2">[</span><span class="s3">1</span><span class="s2">, </span><span class="s0">i</span><span class="s2">].</span><span class="s0">set_title</span><span class="s2">(</span><span class="s4">f&quot;Multiplicative: </span><span class="s1">{</span><span class="s0">titles</span><span class="s2">[</span><span class="s0">i</span><span class="s2">]</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">, </span><span class="s0">color</span><span class="s2">=</span><span class="s4">&quot;white&quot;</span><span class="s2">)</span>
+    <span class="s0">axes</span><span class="s2">[</span><span class="s3">1</span><span class="s2">, </span><span class="s0">i</span><span class="s2">].</span><span class="s0">set_axis_off</span><span class="s2">()</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span><hr class="ls0"><span class="s0">#%% md 
+# MODEL EVAL FUNCTIONS <hr class="ls0">#%% 
+</span><span class="s1">from </span><span class="s0">Helper </span><span class="s1">import </span><span class="s0">load_checkpoint_generic</span>
+<span class="s1">from </span><span class="s0">Model </span><span class="s1">import </span><span class="s0">EdgePreservingDenoiser</span><span class="s2">, </span><span class="s0">calculate_psnr</span><span class="s2">, </span><span class="s0">calculate_snr</span>
+
+<span class="s0">device </span><span class="s2">= </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">device</span><span class="s2">(</span><span class="s4">'cuda' </span><span class="s1">if </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">cuda</span><span class="s2">.</span><span class="s0">is_available</span><span class="s2">() </span><span class="s1">else </span><span class="s4">'cpu'</span><span class="s2">)</span>
+<span class="s0">checkpoint_dir_add </span><span class="s2">= </span><span class="s4">&quot;checkpoints-noise_add&quot;</span>
+<span class="s0">checkpoint_dir_mul </span><span class="s2">= </span><span class="s4">&quot;checkpoints-noise_mul&quot;</span><hr class="ls0"><span class="s0">#%% 
+model_add </span><span class="s2">= </span><span class="s0">EdgePreservingDenoiser</span><span class="s2">().</span><span class="s0">to</span><span class="s2">(</span><span class="s0">device</span><span class="s2">)</span>
+<span class="s0">model_add</span><span class="s2">.</span><span class="s0">load_state_dict</span><span class="s2">(</span><span class="s0">torch</span><span class="s2">.</span><span class="s0">load</span><span class="s2">(</span><span class="s4">f&quot;</span><span class="s1">{</span><span class="s0">checkpoint_dir_add</span><span class="s1">}</span><span class="s4">/best_model.pth&quot;</span><span class="s2">, </span><span class="s0">map_location</span><span class="s2">=</span><span class="s0">device</span><span class="s2">))</span><hr class="ls0"><span class="s0">#%% 
+model_mul </span><span class="s2">= </span><span class="s0">EdgePreservingDenoiser</span><span class="s2">().</span><span class="s0">to</span><span class="s2">(</span><span class="s0">device</span><span class="s2">)</span>
+<span class="s0">model_mul</span><span class="s2">.</span><span class="s0">load_state_dict</span><span class="s2">(</span><span class="s0">torch</span><span class="s2">.</span><span class="s0">load</span><span class="s2">(</span><span class="s4">f&quot;</span><span class="s1">{</span><span class="s0">checkpoint_dir_mul</span><span class="s1">}</span><span class="s4">/best_model.pth&quot;</span><span class="s2">, </span><span class="s0">map_location</span><span class="s2">=</span><span class="s0">device</span><span class="s2">))</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s5"># =============================================================================</span>
+<span class="s5"># VISUALIZATION &amp; ANALYSIS</span>
+<span class="s5"># =============================================================================</span>
+<span class="s1">def </span><span class="s0">plot_training_metrics</span><span class="s2">(</span><span class="s0">checkpoint_dir</span><span class="s2">, </span><span class="s0">save_fig</span><span class="s2">=</span><span class="s1">False</span><span class="s2">):</span>
+    <span class="s6">&quot;&quot;&quot; 
+    Plot comprehensive training metrics from checkpoint data. 
+ 
+    Args: 
+        checkpoint_dir: Directory containing checkpoints 
+        save_fig: If True, saves plots to file 
+    &quot;&quot;&quot;</span>
+    <span class="s1">from </span><span class="s0">pathlib </span><span class="s1">import </span><span class="s0">Path</span>
+
+    <span class="s0">VALIDATION_INTERVAL </span><span class="s2">= </span><span class="s3">100</span>
+    <span class="s0">checkpoint_dir </span><span class="s2">= </span><span class="s0">Path</span><span class="s2">(</span><span class="s0">checkpoint_dir</span><span class="s2">)</span>
+    <span class="s0">checkpoint_dir</span><span class="s2">.</span><span class="s0">mkdir</span><span class="s2">(</span><span class="s0">parents</span><span class="s2">=</span><span class="s1">True</span><span class="s2">, </span><span class="s0">exist_ok</span><span class="s2">=</span><span class="s1">True</span><span class="s2">)</span>
+
+    <span class="s0">checkpoint </span><span class="s2">= </span><span class="s0">load_checkpoint_generic</span><span class="s2">(</span><span class="s0">checkpoint_dir</span><span class="s2">, </span><span class="s0">device</span><span class="s2">=</span><span class="s4">'cpu'</span><span class="s2">)</span>
+
+    <span class="s1">if </span><span class="s0">checkpoint </span><span class="s1">is None</span><span class="s2">:</span>
+        <span class="s0">print</span><span class="s2">(</span><span class="s4">&quot;❌ No checkpoint found!&quot;</span><span class="s2">)</span>
+        <span class="s1">return</span>
+
+    <span class="s5"># Extract data</span>
+    <span class="s0">train_losses </span><span class="s2">= </span><span class="s0">checkpoint</span><span class="s2">.</span><span class="s0">get</span><span class="s2">(</span><span class="s4">'train_losses'</span><span class="s2">, [])</span>
+    <span class="s0">val_losses </span><span class="s2">= </span><span class="s0">checkpoint</span><span class="s2">.</span><span class="s0">get</span><span class="s2">(</span><span class="s4">'val_losses'</span><span class="s2">, [])</span>
+    <span class="s0">val_snrs </span><span class="s2">= </span><span class="s0">checkpoint</span><span class="s2">.</span><span class="s0">get</span><span class="s2">(</span><span class="s4">'val_snrs'</span><span class="s2">, [])</span>
+    <span class="s0">val_psnrs </span><span class="s2">= </span><span class="s0">checkpoint</span><span class="s2">.</span><span class="s0">get</span><span class="s2">(</span><span class="s4">'val_psnrs'</span><span class="s2">, [])</span>
+    <span class="s0">config </span><span class="s2">= </span><span class="s0">checkpoint</span><span class="s2">.</span><span class="s0">get</span><span class="s2">(</span><span class="s4">'config'</span><span class="s2">, {})</span>
+    <span class="s0">iteration </span><span class="s2">= </span><span class="s0">checkpoint</span><span class="s2">.</span><span class="s0">get</span><span class="s2">(</span><span class="s4">'iteration'</span><span class="s2">, </span><span class="s3">0</span><span class="s2">)</span>
+
+    <span class="s5"># Validate data</span>
+    <span class="s1">if not </span><span class="s0">train_losses</span><span class="s2">:</span>
+        <span class="s0">print</span><span class="s2">(</span><span class="s4">&quot;⚠️ No training data found in checkpoint!&quot;</span><span class="s2">)</span>
+        <span class="s1">return</span>
+
+    <span class="s5"># Calculate validation iteration indices</span>
+    <span class="s0">val_iters </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">arange</span><span class="s2">(</span><span class="s0">VALIDATION_INTERVAL</span><span class="s2">,</span>
+                          <span class="s0">VALIDATION_INTERVAL </span><span class="s2">* (</span><span class="s0">len</span><span class="s2">(</span><span class="s0">val_losses</span><span class="s2">) + </span><span class="s3">1</span><span class="s2">),</span>
+                          <span class="s0">VALIDATION_INTERVAL</span><span class="s2">)</span>
+
+    <span class="s5"># Create figure with better layout</span>
+    <span class="s0">fig </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">figure</span><span class="s2">(</span><span class="s0">figsize</span><span class="s2">=(</span><span class="s3">18</span><span class="s2">, </span><span class="s3">10</span><span class="s2">))</span>
+    <span class="s0">gs </span><span class="s2">= </span><span class="s0">fig</span><span class="s2">.</span><span class="s0">add_gridspec</span><span class="s2">(</span><span class="s3">2</span><span class="s2">, </span><span class="s3">3</span><span class="s2">, </span><span class="s0">hspace</span><span class="s2">=</span><span class="s3">0.3</span><span class="s2">, </span><span class="s0">wspace</span><span class="s2">=</span><span class="s3">0.3</span><span class="s2">)</span>
+
+    <span class="s5"># Main title</span>
+    <span class="s0">fig</span><span class="s2">.</span><span class="s0">suptitle</span><span class="s2">(</span><span class="s4">f'Training Metrics Dashboard - Iteration </span><span class="s1">{</span><span class="s0">iteration</span><span class="s1">:</span><span class="s4">,</span><span class="s1">}\n</span><span class="s4">'</span>
+                 <span class="s4">f'Model: EdgePreservingDenoiser | '</span>
+                 <span class="s4">f'Noise: </span><span class="s1">{</span><span class="s0">config</span><span class="s2">.</span><span class="s0">get</span><span class="s2">(</span><span class="s4">&quot;noise_fn&quot;</span><span class="s2">, </span><span class="s4">&quot;N/A&quot;</span><span class="s2">)</span><span class="s1">} </span><span class="s4">| '</span>
+                 <span class="s4">f'Loss: </span><span class="s1">{</span><span class="s0">config</span><span class="s2">.</span><span class="s0">get</span><span class="s2">(</span><span class="s4">&quot;loss_fn&quot;</span><span class="s2">, </span><span class="s4">&quot;N/A&quot;</span><span class="s2">)</span><span class="s1">} </span><span class="s4">| '</span>
+                 <span class="s4">f'LR: </span><span class="s1">{</span><span class="s0">config</span><span class="s2">.</span><span class="s0">get</span><span class="s2">(</span><span class="s4">&quot;learning_rate&quot;</span><span class="s2">, </span><span class="s4">&quot;N/A&quot;</span><span class="s2">)</span><span class="s1">}</span><span class="s4">'</span><span class="s2">,</span>
+                 <span class="s0">fontsize</span><span class="s2">=</span><span class="s3">16</span><span class="s2">, </span><span class="s0">fontweight</span><span class="s2">=</span><span class="s4">'bold'</span><span class="s2">, </span><span class="s0">y</span><span class="s2">=</span><span class="s3">0.98</span><span class="s2">)</span>
+
+    <span class="s5"># ========== Plot 1: Training Loss (Full) ==========</span>
+    <span class="s0">ax1 </span><span class="s2">= </span><span class="s0">fig</span><span class="s2">.</span><span class="s0">add_subplot</span><span class="s2">(</span><span class="s0">gs</span><span class="s2">[</span><span class="s3">0</span><span class="s2">, </span><span class="s3">0</span><span class="s2">])</span>
+    <span class="s0">ax1</span><span class="s2">.</span><span class="s0">plot</span><span class="s2">(</span><span class="s0">train_losses</span><span class="s2">, </span><span class="s0">linewidth</span><span class="s2">=</span><span class="s3">0.5</span><span class="s2">, </span><span class="s0">alpha</span><span class="s2">=</span><span class="s3">0.6</span><span class="s2">, </span><span class="s0">color</span><span class="s2">=</span><span class="s4">'steelblue'</span><span class="s2">, </span><span class="s0">label</span><span class="s2">=</span><span class="s4">'Raw Loss'</span><span class="s2">)</span>
+
+    <span class="s5"># Moving average for smoother visualization</span>
+    <span class="s0">window </span><span class="s2">= </span><span class="s0">min</span><span class="s2">(</span><span class="s3">100</span><span class="s2">, </span><span class="s0">max</span><span class="s2">(</span><span class="s3">10</span><span class="s2">, </span><span class="s0">len</span><span class="s2">(</span><span class="s0">train_losses</span><span class="s2">) // </span><span class="s3">20</span><span class="s2">))</span>
+    <span class="s1">if </span><span class="s0">len</span><span class="s2">(</span><span class="s0">train_losses</span><span class="s2">) &gt; </span><span class="s0">window</span><span class="s2">:</span>
+        <span class="s0">train_ma </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">convolve</span><span class="s2">(</span><span class="s0">train_losses</span><span class="s2">, </span><span class="s0">np</span><span class="s2">.</span><span class="s0">ones</span><span class="s2">(</span><span class="s0">window</span><span class="s2">) / </span><span class="s0">window</span><span class="s2">, </span><span class="s0">mode</span><span class="s2">=</span><span class="s4">'valid'</span><span class="s2">)</span>
+        <span class="s0">ax1</span><span class="s2">.</span><span class="s0">plot</span><span class="s2">(</span><span class="s0">range</span><span class="s2">(</span><span class="s0">window </span><span class="s2">- </span><span class="s3">1</span><span class="s2">, </span><span class="s0">len</span><span class="s2">(</span><span class="s0">train_losses</span><span class="s2">)), </span><span class="s0">train_ma</span><span class="s2">,</span>
+                 <span class="s0">linewidth</span><span class="s2">=</span><span class="s3">2</span><span class="s2">, </span><span class="s0">color</span><span class="s2">=</span><span class="s4">'darkblue'</span><span class="s2">, </span><span class="s0">label</span><span class="s2">=</span><span class="s4">f'Moving Avg (</span><span class="s1">{</span><span class="s0">window</span><span class="s1">}</span><span class="s4">)'</span><span class="s2">)</span>
+
+    <span class="s0">ax1</span><span class="s2">.</span><span class="s0">set_xlabel</span><span class="s2">(</span><span class="s4">'Iteration'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">10</span><span class="s2">)</span>
+    <span class="s0">ax1</span><span class="s2">.</span><span class="s0">set_ylabel</span><span class="s2">(</span><span class="s4">'Loss'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">10</span><span class="s2">)</span>
+    <span class="s0">ax1</span><span class="s2">.</span><span class="s0">set_title</span><span class="s2">(</span><span class="s4">'Training Loss (Full History)'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">11</span><span class="s2">, </span><span class="s0">fontweight</span><span class="s2">=</span><span class="s4">'bold'</span><span class="s2">)</span>
+    <span class="s0">ax1</span><span class="s2">.</span><span class="s0">legend</span><span class="s2">(</span><span class="s0">loc</span><span class="s2">=</span><span class="s4">'upper right'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">9</span><span class="s2">)</span>
+    <span class="s0">ax1</span><span class="s2">.</span><span class="s0">grid</span><span class="s2">(</span><span class="s1">True</span><span class="s2">, </span><span class="s0">alpha</span><span class="s2">=</span><span class="s3">0.3</span><span class="s2">)</span>
+    <span class="s0">ax1</span><span class="s2">.</span><span class="s0">set_yscale</span><span class="s2">(</span><span class="s4">'log'</span><span class="s2">)</span>
+
+    <span class="s5"># Add min annotation</span>
+    <span class="s0">min_loss </span><span class="s2">= </span><span class="s0">min</span><span class="s2">(</span><span class="s0">train_losses</span><span class="s2">)</span>
+    <span class="s0">ax1</span><span class="s2">.</span><span class="s0">axhline</span><span class="s2">(</span><span class="s0">y</span><span class="s2">=</span><span class="s0">min_loss</span><span class="s2">, </span><span class="s0">color</span><span class="s2">=</span><span class="s4">'green'</span><span class="s2">, </span><span class="s0">linestyle</span><span class="s2">=</span><span class="s4">'--'</span><span class="s2">, </span><span class="s0">alpha</span><span class="s2">=</span><span class="s3">0.3</span><span class="s2">, </span><span class="s0">linewidth</span><span class="s2">=</span><span class="s3">1</span><span class="s2">)</span>
+    <span class="s0">ax1</span><span class="s2">.</span><span class="s0">text</span><span class="s2">(</span><span class="s0">len</span><span class="s2">(</span><span class="s0">train_losses</span><span class="s2">) * </span><span class="s3">0.98</span><span class="s2">, </span><span class="s0">min_loss</span><span class="s2">, </span><span class="s4">f'Min: </span><span class="s1">{</span><span class="s0">min_loss</span><span class="s1">:</span><span class="s4">.6f</span><span class="s1">}</span><span class="s4">'</span><span class="s2">,</span>
+             <span class="s0">ha</span><span class="s2">=</span><span class="s4">'right'</span><span class="s2">, </span><span class="s0">va</span><span class="s2">=</span><span class="s4">'bottom'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">8</span><span class="s2">, </span><span class="s0">color</span><span class="s2">=</span><span class="s4">'green'</span><span class="s2">)</span>
+
+    <span class="s5"># ========== Plot 2: Training Loss (Recent) ==========</span>
+    <span class="s0">ax2 </span><span class="s2">= </span><span class="s0">fig</span><span class="s2">.</span><span class="s0">add_subplot</span><span class="s2">(</span><span class="s0">gs</span><span class="s2">[</span><span class="s3">0</span><span class="s2">, </span><span class="s3">1</span><span class="s2">])</span>
+    <span class="s0">recent_n </span><span class="s2">= </span><span class="s0">min</span><span class="s2">(</span><span class="s3">1000</span><span class="s2">, </span><span class="s0">len</span><span class="s2">(</span><span class="s0">train_losses</span><span class="s2">))</span>
+    <span class="s0">recent_losses </span><span class="s2">= </span><span class="s0">train_losses</span><span class="s2">[-</span><span class="s0">recent_n</span><span class="s2">:]</span>
+    <span class="s0">ax2</span><span class="s2">.</span><span class="s0">plot</span><span class="s2">(</span><span class="s0">range</span><span class="s2">(</span><span class="s0">len</span><span class="s2">(</span><span class="s0">train_losses</span><span class="s2">) - </span><span class="s0">recent_n</span><span class="s2">, </span><span class="s0">len</span><span class="s2">(</span><span class="s0">train_losses</span><span class="s2">)),</span>
+             <span class="s0">recent_losses</span><span class="s2">, </span><span class="s0">linewidth</span><span class="s2">=</span><span class="s3">1</span><span class="s2">, </span><span class="s0">color</span><span class="s2">=</span><span class="s4">'steelblue'</span><span class="s2">)</span>
+    <span class="s0">ax2</span><span class="s2">.</span><span class="s0">set_xlabel</span><span class="s2">(</span><span class="s4">'Iteration'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">10</span><span class="s2">)</span>
+    <span class="s0">ax2</span><span class="s2">.</span><span class="s0">set_ylabel</span><span class="s2">(</span><span class="s4">'Loss'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">10</span><span class="s2">)</span>
+    <span class="s0">ax2</span><span class="s2">.</span><span class="s0">set_title</span><span class="s2">(</span><span class="s4">f'Training Loss (Last </span><span class="s1">{</span><span class="s0">recent_n</span><span class="s1">}</span><span class="s4">)'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">11</span><span class="s2">, </span><span class="s0">fontweight</span><span class="s2">=</span><span class="s4">'bold'</span><span class="s2">)</span>
+    <span class="s0">ax2</span><span class="s2">.</span><span class="s0">grid</span><span class="s2">(</span><span class="s1">True</span><span class="s2">, </span><span class="s0">alpha</span><span class="s2">=</span><span class="s3">0.3</span><span class="s2">)</span>
+
+    <span class="s5"># ========== Plot 3: Validation Loss ==========</span>
+    <span class="s0">ax3 </span><span class="s2">= </span><span class="s0">fig</span><span class="s2">.</span><span class="s0">add_subplot</span><span class="s2">(</span><span class="s0">gs</span><span class="s2">[</span><span class="s3">0</span><span class="s2">, </span><span class="s3">2</span><span class="s2">])</span>
+    <span class="s1">if </span><span class="s0">val_losses</span><span class="s2">:</span>
+        <span class="s0">ax3</span><span class="s2">.</span><span class="s0">plot</span><span class="s2">(</span><span class="s0">val_iters</span><span class="s2">, </span><span class="s0">val_losses</span><span class="s2">, </span><span class="s0">marker</span><span class="s2">=</span><span class="s4">'o'</span><span class="s2">, </span><span class="s0">linewidth</span><span class="s2">=</span><span class="s3">2</span><span class="s2">,</span>
+                 <span class="s0">markersize</span><span class="s2">=</span><span class="s3">4</span><span class="s2">, </span><span class="s0">color</span><span class="s2">=</span><span class="s4">'coral'</span><span class="s2">, </span><span class="s0">label</span><span class="s2">=</span><span class="s4">'Val Loss'</span><span class="s2">)</span>
+        <span class="s0">ax3</span><span class="s2">.</span><span class="s0">set_xlabel</span><span class="s2">(</span><span class="s4">'Iteration'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">10</span><span class="s2">)</span>
+        <span class="s0">ax3</span><span class="s2">.</span><span class="s0">set_ylabel</span><span class="s2">(</span><span class="s4">'Loss'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">10</span><span class="s2">)</span>
+        <span class="s0">ax3</span><span class="s2">.</span><span class="s0">set_title</span><span class="s2">(</span><span class="s4">'Validation Loss'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">11</span><span class="s2">, </span><span class="s0">fontweight</span><span class="s2">=</span><span class="s4">'bold'</span><span class="s2">)</span>
+        <span class="s0">ax3</span><span class="s2">.</span><span class="s0">grid</span><span class="s2">(</span><span class="s1">True</span><span class="s2">, </span><span class="s0">alpha</span><span class="s2">=</span><span class="s3">0.3</span><span class="s2">)</span>
+        <span class="s0">ax3</span><span class="s2">.</span><span class="s0">set_yscale</span><span class="s2">(</span><span class="s4">'log'</span><span class="s2">)</span>
+
+        <span class="s5"># Mark best</span>
+        <span class="s0">min_val_loss </span><span class="s2">= </span><span class="s0">min</span><span class="s2">(</span><span class="s0">val_losses</span><span class="s2">)</span>
+        <span class="s0">min_idx </span><span class="s2">= </span><span class="s0">val_losses</span><span class="s2">.</span><span class="s0">index</span><span class="s2">(</span><span class="s0">min_val_loss</span><span class="s2">)</span>
+        <span class="s0">ax3</span><span class="s2">.</span><span class="s0">plot</span><span class="s2">(</span><span class="s0">val_iters</span><span class="s2">[</span><span class="s0">min_idx</span><span class="s2">], </span><span class="s0">min_val_loss</span><span class="s2">, </span><span class="s4">'r*'</span><span class="s2">, </span><span class="s0">markersize</span><span class="s2">=</span><span class="s3">12</span><span class="s2">,</span>
+                 <span class="s0">label</span><span class="s2">=</span><span class="s4">f'Best: </span><span class="s1">{</span><span class="s0">min_val_loss</span><span class="s1">:</span><span class="s4">.6f</span><span class="s1">}</span><span class="s4">'</span><span class="s2">)</span>
+        <span class="s0">ax3</span><span class="s2">.</span><span class="s0">legend</span><span class="s2">(</span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">9</span><span class="s2">)</span>
+    <span class="s1">else</span><span class="s2">:</span>
+        <span class="s0">ax3</span><span class="s2">.</span><span class="s0">text</span><span class="s2">(</span><span class="s3">0.5</span><span class="s2">, </span><span class="s3">0.5</span><span class="s2">, </span><span class="s4">'No validation data'</span><span class="s2">, </span><span class="s0">ha</span><span class="s2">=</span><span class="s4">'center'</span><span class="s2">, </span><span class="s0">va</span><span class="s2">=</span><span class="s4">'center'</span><span class="s2">,</span>
+                 <span class="s0">transform</span><span class="s2">=</span><span class="s0">ax3</span><span class="s2">.</span><span class="s0">transAxes</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">12</span><span class="s2">)</span>
+        <span class="s0">ax3</span><span class="s2">.</span><span class="s0">set_title</span><span class="s2">(</span><span class="s4">'Validation Loss'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">11</span><span class="s2">, </span><span class="s0">fontweight</span><span class="s2">=</span><span class="s4">'bold'</span><span class="s2">)</span>
+
+    <span class="s5"># ========== Plot 4: SNR ==========</span>
+    <span class="s0">ax4 </span><span class="s2">= </span><span class="s0">fig</span><span class="s2">.</span><span class="s0">add_subplot</span><span class="s2">(</span><span class="s0">gs</span><span class="s2">[</span><span class="s3">1</span><span class="s2">, </span><span class="s3">0</span><span class="s2">])</span>
+    <span class="s1">if </span><span class="s0">val_snrs</span><span class="s2">:</span>
+        <span class="s0">ax4</span><span class="s2">.</span><span class="s0">plot</span><span class="s2">(</span><span class="s0">val_iters</span><span class="s2">, </span><span class="s0">val_snrs</span><span class="s2">, </span><span class="s0">marker</span><span class="s2">=</span><span class="s4">'s'</span><span class="s2">, </span><span class="s0">linewidth</span><span class="s2">=</span><span class="s3">2</span><span class="s2">,</span>
+                 <span class="s0">markersize</span><span class="s2">=</span><span class="s3">4</span><span class="s2">, </span><span class="s0">color</span><span class="s2">=</span><span class="s4">'green'</span><span class="s2">, </span><span class="s0">label</span><span class="s2">=</span><span class="s4">'Val SNR'</span><span class="s2">)</span>
+        <span class="s0">ax4</span><span class="s2">.</span><span class="s0">set_xlabel</span><span class="s2">(</span><span class="s4">'Iteration'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">10</span><span class="s2">)</span>
+        <span class="s0">ax4</span><span class="s2">.</span><span class="s0">set_ylabel</span><span class="s2">(</span><span class="s4">'SNR (dB)'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">10</span><span class="s2">)</span>
+        <span class="s0">ax4</span><span class="s2">.</span><span class="s0">set_title</span><span class="s2">(</span><span class="s4">'Signal-to-Noise Ratio'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">11</span><span class="s2">, </span><span class="s0">fontweight</span><span class="s2">=</span><span class="s4">'bold'</span><span class="s2">)</span>
+        <span class="s0">ax4</span><span class="s2">.</span><span class="s0">grid</span><span class="s2">(</span><span class="s1">True</span><span class="s2">, </span><span class="s0">alpha</span><span class="s2">=</span><span class="s3">0.3</span><span class="s2">)</span>
+
+        <span class="s5"># Mark best</span>
+        <span class="s0">max_snr </span><span class="s2">= </span><span class="s0">max</span><span class="s2">(</span><span class="s0">val_snrs</span><span class="s2">)</span>
+        <span class="s0">max_idx </span><span class="s2">= </span><span class="s0">val_snrs</span><span class="s2">.</span><span class="s0">index</span><span class="s2">(</span><span class="s0">max_snr</span><span class="s2">)</span>
+        <span class="s0">ax4</span><span class="s2">.</span><span class="s0">axhline</span><span class="s2">(</span><span class="s0">y</span><span class="s2">=</span><span class="s0">max_snr</span><span class="s2">, </span><span class="s0">color</span><span class="s2">=</span><span class="s4">'red'</span><span class="s2">, </span><span class="s0">linestyle</span><span class="s2">=</span><span class="s4">'--'</span><span class="s2">, </span><span class="s0">alpha</span><span class="s2">=</span><span class="s3">0.3</span><span class="s2">, </span><span class="s0">linewidth</span><span class="s2">=</span><span class="s3">1</span><span class="s2">)</span>
+        <span class="s0">ax4</span><span class="s2">.</span><span class="s0">plot</span><span class="s2">(</span><span class="s0">val_iters</span><span class="s2">[</span><span class="s0">max_idx</span><span class="s2">], </span><span class="s0">max_snr</span><span class="s2">, </span><span class="s4">'r*'</span><span class="s2">, </span><span class="s0">markersize</span><span class="s2">=</span><span class="s3">12</span><span class="s2">,</span>
+                 <span class="s0">label</span><span class="s2">=</span><span class="s4">f'Best: </span><span class="s1">{</span><span class="s0">max_snr</span><span class="s1">:</span><span class="s4">.2f</span><span class="s1">} </span><span class="s4">dB'</span><span class="s2">)</span>
+        <span class="s0">ax4</span><span class="s2">.</span><span class="s0">legend</span><span class="s2">(</span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">9</span><span class="s2">)</span>
+    <span class="s1">else</span><span class="s2">:</span>
+        <span class="s0">ax4</span><span class="s2">.</span><span class="s0">text</span><span class="s2">(</span><span class="s3">0.5</span><span class="s2">, </span><span class="s3">0.5</span><span class="s2">, </span><span class="s4">'No SNR data'</span><span class="s2">, </span><span class="s0">ha</span><span class="s2">=</span><span class="s4">'center'</span><span class="s2">, </span><span class="s0">va</span><span class="s2">=</span><span class="s4">'center'</span><span class="s2">,</span>
+                 <span class="s0">transform</span><span class="s2">=</span><span class="s0">ax4</span><span class="s2">.</span><span class="s0">transAxes</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">12</span><span class="s2">)</span>
+        <span class="s0">ax4</span><span class="s2">.</span><span class="s0">set_title</span><span class="s2">(</span><span class="s4">'Signal-to-Noise Ratio'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">11</span><span class="s2">, </span><span class="s0">fontweight</span><span class="s2">=</span><span class="s4">'bold'</span><span class="s2">)</span>
+
+    <span class="s5"># ========== Plot 5: PSNR ==========</span>
+    <span class="s0">ax5 </span><span class="s2">= </span><span class="s0">fig</span><span class="s2">.</span><span class="s0">add_subplot</span><span class="s2">(</span><span class="s0">gs</span><span class="s2">[</span><span class="s3">1</span><span class="s2">, </span><span class="s3">1</span><span class="s2">])</span>
+    <span class="s1">if </span><span class="s0">val_psnrs</span><span class="s2">:</span>
+        <span class="s0">ax5</span><span class="s2">.</span><span class="s0">plot</span><span class="s2">(</span><span class="s0">val_iters</span><span class="s2">, </span><span class="s0">val_psnrs</span><span class="s2">, </span><span class="s0">marker</span><span class="s2">=</span><span class="s4">'d'</span><span class="s2">, </span><span class="s0">linewidth</span><span class="s2">=</span><span class="s3">2</span><span class="s2">,</span>
+                 <span class="s0">markersize</span><span class="s2">=</span><span class="s3">4</span><span class="s2">, </span><span class="s0">color</span><span class="s2">=</span><span class="s4">'purple'</span><span class="s2">, </span><span class="s0">label</span><span class="s2">=</span><span class="s4">'Val PSNR'</span><span class="s2">)</span>
+        <span class="s0">ax5</span><span class="s2">.</span><span class="s0">set_xlabel</span><span class="s2">(</span><span class="s4">'Iteration'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">10</span><span class="s2">)</span>
+        <span class="s0">ax5</span><span class="s2">.</span><span class="s0">set_ylabel</span><span class="s2">(</span><span class="s4">'PSNR (dB)'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">10</span><span class="s2">)</span>
+        <span class="s0">ax5</span><span class="s2">.</span><span class="s0">set_title</span><span class="s2">(</span><span class="s4">'Peak Signal-to-Noise Ratio'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">11</span><span class="s2">, </span><span class="s0">fontweight</span><span class="s2">=</span><span class="s4">'bold'</span><span class="s2">)</span>
+        <span class="s0">ax5</span><span class="s2">.</span><span class="s0">grid</span><span class="s2">(</span><span class="s1">True</span><span class="s2">, </span><span class="s0">alpha</span><span class="s2">=</span><span class="s3">0.3</span><span class="s2">)</span>
+
+        <span class="s5"># Mark best</span>
+        <span class="s0">max_psnr </span><span class="s2">= </span><span class="s0">max</span><span class="s2">(</span><span class="s0">val_psnrs</span><span class="s2">)</span>
+        <span class="s0">max_idx </span><span class="s2">= </span><span class="s0">val_psnrs</span><span class="s2">.</span><span class="s0">index</span><span class="s2">(</span><span class="s0">max_psnr</span><span class="s2">)</span>
+        <span class="s0">ax5</span><span class="s2">.</span><span class="s0">axhline</span><span class="s2">(</span><span class="s0">y</span><span class="s2">=</span><span class="s0">max_psnr</span><span class="s2">, </span><span class="s0">color</span><span class="s2">=</span><span class="s4">'red'</span><span class="s2">, </span><span class="s0">linestyle</span><span class="s2">=</span><span class="s4">'--'</span><span class="s2">, </span><span class="s0">alpha</span><span class="s2">=</span><span class="s3">0.3</span><span class="s2">, </span><span class="s0">linewidth</span><span class="s2">=</span><span class="s3">1</span><span class="s2">)</span>
+        <span class="s0">ax5</span><span class="s2">.</span><span class="s0">plot</span><span class="s2">(</span><span class="s0">val_iters</span><span class="s2">[</span><span class="s0">max_idx</span><span class="s2">], </span><span class="s0">max_psnr</span><span class="s2">, </span><span class="s4">'r*'</span><span class="s2">, </span><span class="s0">markersize</span><span class="s2">=</span><span class="s3">12</span><span class="s2">,</span>
+                 <span class="s0">label</span><span class="s2">=</span><span class="s4">f'Best: </span><span class="s1">{</span><span class="s0">max_psnr</span><span class="s1">:</span><span class="s4">.2f</span><span class="s1">} </span><span class="s4">dB'</span><span class="s2">)</span>
+        <span class="s0">ax5</span><span class="s2">.</span><span class="s0">legend</span><span class="s2">(</span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">9</span><span class="s2">)</span>
+    <span class="s1">else</span><span class="s2">:</span>
+        <span class="s0">ax5</span><span class="s2">.</span><span class="s0">text</span><span class="s2">(</span><span class="s3">0.5</span><span class="s2">, </span><span class="s3">0.5</span><span class="s2">, </span><span class="s4">'No PSNR data'</span><span class="s2">, </span><span class="s0">ha</span><span class="s2">=</span><span class="s4">'center'</span><span class="s2">, </span><span class="s0">va</span><span class="s2">=</span><span class="s4">'center'</span><span class="s2">,</span>
+                 <span class="s0">transform</span><span class="s2">=</span><span class="s0">ax5</span><span class="s2">.</span><span class="s0">transAxes</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">12</span><span class="s2">)</span>
+        <span class="s0">ax5</span><span class="s2">.</span><span class="s0">set_title</span><span class="s2">(</span><span class="s4">'Peak Signal-to-Noise Ratio'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">11</span><span class="s2">, </span><span class="s0">fontweight</span><span class="s2">=</span><span class="s4">'bold'</span><span class="s2">)</span>
+
+    <span class="s5"># ========== Plot 6: Statistics Summary ==========</span>
+    <span class="s0">ax6 </span><span class="s2">= </span><span class="s0">fig</span><span class="s2">.</span><span class="s0">add_subplot</span><span class="s2">(</span><span class="s0">gs</span><span class="s2">[</span><span class="s3">1</span><span class="s2">, </span><span class="s3">2</span><span class="s2">])</span>
+    <span class="s0">ax6</span><span class="s2">.</span><span class="s0">axis</span><span class="s2">(</span><span class="s4">'off'</span><span class="s2">)</span>
+
+    <span class="s0">stats_text </span><span class="s2">= </span><span class="s4">&quot;📊 TRAINING STATISTICS</span><span class="s1">\n</span><span class="s4">&quot; </span><span class="s2">+ </span><span class="s4">&quot;=&quot; </span><span class="s2">* </span><span class="s3">35 </span><span class="s2">+ </span><span class="s4">&quot;</span><span class="s1">\n\n</span><span class="s4">&quot;</span>
+
+    <span class="s0">stats_text </span><span class="s2">+= </span><span class="s4">f&quot;📈 Training Loss:</span><span class="s1">\n</span><span class="s4">&quot;</span>
+    <span class="s0">stats_text </span><span class="s2">+= </span><span class="s4">f&quot;   Min:     </span><span class="s1">{</span><span class="s0">min</span><span class="s2">(</span><span class="s0">train_losses</span><span class="s2">)</span><span class="s1">:</span><span class="s4">.6f</span><span class="s1">}\n</span><span class="s4">&quot;</span>
+    <span class="s0">stats_text </span><span class="s2">+= </span><span class="s4">f&quot;   Max:     </span><span class="s1">{</span><span class="s0">max</span><span class="s2">(</span><span class="s0">train_losses</span><span class="s2">)</span><span class="s1">:</span><span class="s4">.6f</span><span class="s1">}\n</span><span class="s4">&quot;</span>
+    <span class="s0">stats_text </span><span class="s2">+= </span><span class="s4">f&quot;   Final:   </span><span class="s1">{</span><span class="s0">train_losses</span><span class="s2">[-</span><span class="s3">1</span><span class="s2">]</span><span class="s1">:</span><span class="s4">.6f</span><span class="s1">}\n</span><span class="s4">&quot;</span>
+    <span class="s0">stats_text </span><span class="s2">+= </span><span class="s4">f&quot;   Samples: </span><span class="s1">{</span><span class="s0">len</span><span class="s2">(</span><span class="s0">train_losses</span><span class="s2">)</span><span class="s1">:</span><span class="s4">,</span><span class="s1">}\n\n</span><span class="s4">&quot;</span>
+
+    <span class="s1">if </span><span class="s0">val_losses</span><span class="s2">:</span>
+        <span class="s0">stats_text </span><span class="s2">+= </span><span class="s4">f&quot;📉 Validation Loss:</span><span class="s1">\n</span><span class="s4">&quot;</span>
+        <span class="s0">stats_text </span><span class="s2">+= </span><span class="s4">f&quot;   Min:     </span><span class="s1">{</span><span class="s0">min</span><span class="s2">(</span><span class="s0">val_losses</span><span class="s2">)</span><span class="s1">:</span><span class="s4">.6f</span><span class="s1">}\n</span><span class="s4">&quot;</span>
+        <span class="s0">stats_text </span><span class="s2">+= </span><span class="s4">f&quot;   Final:   </span><span class="s1">{</span><span class="s0">val_losses</span><span class="s2">[-</span><span class="s3">1</span><span class="s2">]</span><span class="s1">:</span><span class="s4">.6f</span><span class="s1">}\n\n</span><span class="s4">&quot;</span>
+
+    <span class="s1">if </span><span class="s0">val_snrs</span><span class="s2">:</span>
+        <span class="s0">stats_text </span><span class="s2">+= </span><span class="s4">f&quot;🔊 Val SNR:</span><span class="s1">\n</span><span class="s4">&quot;</span>
+        <span class="s0">stats_text </span><span class="s2">+= </span><span class="s4">f&quot;   Max:     </span><span class="s1">{</span><span class="s0">max</span><span class="s2">(</span><span class="s0">val_snrs</span><span class="s2">)</span><span class="s1">:</span><span class="s4">.2f</span><span class="s1">} </span><span class="s4">dB</span><span class="s1">\n</span><span class="s4">&quot;</span>
+        <span class="s0">stats_text </span><span class="s2">+= </span><span class="s4">f&quot;   Final:   </span><span class="s1">{</span><span class="s0">val_snrs</span><span class="s2">[-</span><span class="s3">1</span><span class="s2">]</span><span class="s1">:</span><span class="s4">.2f</span><span class="s1">} </span><span class="s4">dB</span><span class="s1">\n\n</span><span class="s4">&quot;</span>
+
+    <span class="s1">if </span><span class="s0">val_psnrs</span><span class="s2">:</span>
+        <span class="s0">stats_text </span><span class="s2">+= </span><span class="s4">f&quot;📸 Val PSNR:</span><span class="s1">\n</span><span class="s4">&quot;</span>
+        <span class="s0">stats_text </span><span class="s2">+= </span><span class="s4">f&quot;   Max:     </span><span class="s1">{</span><span class="s0">max</span><span class="s2">(</span><span class="s0">val_psnrs</span><span class="s2">)</span><span class="s1">:</span><span class="s4">.2f</span><span class="s1">} </span><span class="s4">dB</span><span class="s1">\n</span><span class="s4">&quot;</span>
+        <span class="s0">stats_text </span><span class="s2">+= </span><span class="s4">f&quot;   Final:   </span><span class="s1">{</span><span class="s0">val_psnrs</span><span class="s2">[-</span><span class="s3">1</span><span class="s2">]</span><span class="s1">:</span><span class="s4">.2f</span><span class="s1">} </span><span class="s4">dB</span><span class="s1">\n\n</span><span class="s4">&quot;</span>
+
+    <span class="s0">stats_text </span><span class="s2">+= </span><span class="s4">f&quot;⚙️  Configuration:</span><span class="s1">\n</span><span class="s4">&quot;</span>
+    <span class="s0">stats_text </span><span class="s2">+= </span><span class="s4">f&quot;   Batch Size:  </span><span class="s1">{</span><span class="s0">config</span><span class="s2">.</span><span class="s0">get</span><span class="s2">(</span><span class="s4">'batch_size'</span><span class="s2">, </span><span class="s4">'N/A'</span><span class="s2">)</span><span class="s1">}\n</span><span class="s4">&quot;</span>
+    <span class="s0">stats_text </span><span class="s2">+= </span><span class="s4">f&quot;   Learn Rate:  </span><span class="s1">{</span><span class="s0">config</span><span class="s2">.</span><span class="s0">get</span><span class="s2">(</span><span class="s4">'learning_rate'</span><span class="s2">, </span><span class="s4">'N/A'</span><span class="s2">)</span><span class="s1">}\n</span><span class="s4">&quot;</span>
+    <span class="s0">stats_text </span><span class="s2">+= </span><span class="s4">f&quot;   Train Size:  </span><span class="s1">{</span><span class="s0">config</span><span class="s2">.</span><span class="s0">get</span><span class="s2">(</span><span class="s4">'train_size'</span><span class="s2">, </span><span class="s4">'N/A'</span><span class="s2">)</span><span class="s1">}\n</span><span class="s4">&quot;</span>
+    <span class="s0">stats_text </span><span class="s2">+= </span><span class="s4">f&quot;   Val Size:    </span><span class="s1">{</span><span class="s0">config</span><span class="s2">.</span><span class="s0">get</span><span class="s2">(</span><span class="s4">'val_size'</span><span class="s2">, </span><span class="s4">'N/A'</span><span class="s2">)</span><span class="s1">}\n</span><span class="s4">&quot;</span>
+
+    <span class="s0">ax6</span><span class="s2">.</span><span class="s0">text</span><span class="s2">(</span><span class="s3">0.05</span><span class="s2">, </span><span class="s3">0.95</span><span class="s2">, </span><span class="s0">stats_text</span><span class="s2">, </span><span class="s0">transform</span><span class="s2">=</span><span class="s0">ax6</span><span class="s2">.</span><span class="s0">transAxes</span><span class="s2">,</span>
+             <span class="s0">fontsize</span><span class="s2">=</span><span class="s3">9</span><span class="s2">, </span><span class="s0">verticalalignment</span><span class="s2">=</span><span class="s4">'top'</span><span class="s2">, </span><span class="s0">fontfamily</span><span class="s2">=</span><span class="s4">'monospace'</span><span class="s2">,</span>
+             <span class="s0">bbox</span><span class="s2">=</span><span class="s0">dict</span><span class="s2">(</span><span class="s0">boxstyle</span><span class="s2">=</span><span class="s4">'round'</span><span class="s2">, </span><span class="s0">facecolor</span><span class="s2">=</span><span class="s4">'wheat'</span><span class="s2">, </span><span class="s0">alpha</span><span class="s2">=</span><span class="s3">0.3</span><span class="s2">))</span>
+
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+
+    <span class="s1">if </span><span class="s0">save_fig</span><span class="s2">:</span>
+        <span class="s0">plot_path </span><span class="s2">= </span><span class="s0">checkpoint_dir </span><span class="s2">/ </span><span class="s4">f'training_metrics_iter</span><span class="s1">{</span><span class="s0">iteration</span><span class="s1">}</span><span class="s4">.png'</span>
+        <span class="s0">plt</span><span class="s2">.</span><span class="s0">savefig</span><span class="s2">(</span><span class="s0">plot_path</span><span class="s2">, </span><span class="s0">dpi</span><span class="s2">=</span><span class="s3">150</span><span class="s2">, </span><span class="s0">bbox_inches</span><span class="s2">=</span><span class="s4">'tight'</span><span class="s2">)</span>
+        <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;📊 Plot saved to </span><span class="s1">{</span><span class="s0">plot_path</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span>
+
+    <span class="s5"># Print detailed summary to console</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">&quot;</span><span class="s1">\n</span><span class="s4">&quot; </span><span class="s2">+ </span><span class="s4">&quot;=&quot; </span><span class="s2">* </span><span class="s3">80</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">&quot;📈 DETAILED TRAINING SUMMARY&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">&quot;=&quot; </span><span class="s2">* </span><span class="s3">80</span><span class="s2">)</span>
+
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;Training Loss:&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;  Min:         </span><span class="s1">{</span><span class="s0">min</span><span class="s2">(</span><span class="s0">train_losses</span><span class="s2">)</span><span class="s1">:</span><span class="s4">.6f</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;  Max:         </span><span class="s1">{</span><span class="s0">max</span><span class="s2">(</span><span class="s0">train_losses</span><span class="s2">)</span><span class="s1">:</span><span class="s4">.6f</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;  Final:       </span><span class="s1">{</span><span class="s0">train_losses</span><span class="s2">[-</span><span class="s3">1</span><span class="s2">]</span><span class="s1">:</span><span class="s4">.6f</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;  Mean:        </span><span class="s1">{</span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">train_losses</span><span class="s2">)</span><span class="s1">:</span><span class="s4">.6f</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;  Std:         </span><span class="s1">{</span><span class="s0">np</span><span class="s2">.</span><span class="s0">std</span><span class="s2">(</span><span class="s0">train_losses</span><span class="s2">)</span><span class="s1">:</span><span class="s4">.6f</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;  Samples:     </span><span class="s1">{</span><span class="s0">len</span><span class="s2">(</span><span class="s0">train_losses</span><span class="s2">)</span><span class="s1">:</span><span class="s4">,</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">()</span>
+
+    <span class="s1">if </span><span class="s0">val_losses</span><span class="s2">:</span>
+        <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;Validation Loss:&quot;</span><span class="s2">)</span>
+        <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;  Min:         </span><span class="s1">{</span><span class="s0">min</span><span class="s2">(</span><span class="s0">val_losses</span><span class="s2">)</span><span class="s1">:</span><span class="s4">.6f</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+        <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;  Final:       </span><span class="s1">{</span><span class="s0">val_losses</span><span class="s2">[-</span><span class="s3">1</span><span class="s2">]</span><span class="s1">:</span><span class="s4">.6f</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+        <span class="s0">improvement </span><span class="s2">= ((</span><span class="s0">val_losses</span><span class="s2">[</span><span class="s3">0</span><span class="s2">] - </span><span class="s0">val_losses</span><span class="s2">[-</span><span class="s3">1</span><span class="s2">]) / </span><span class="s0">val_losses</span><span class="s2">[</span><span class="s3">0</span><span class="s2">] * </span><span class="s3">100</span><span class="s2">) </span><span class="s1">if </span><span class="s0">val_losses</span><span class="s2">[</span><span class="s3">0</span><span class="s2">] != </span><span class="s3">0 </span><span class="s1">else </span><span class="s3">0</span>
+        <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;  Improvement: </span><span class="s1">{</span><span class="s0">improvement</span><span class="s1">:</span><span class="s4">.2f</span><span class="s1">}</span><span class="s4">%&quot;</span><span class="s2">)</span>
+        <span class="s0">print</span><span class="s2">()</span>
+
+    <span class="s1">if </span><span class="s0">val_snrs</span><span class="s2">:</span>
+        <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;Validation SNR:&quot;</span><span class="s2">)</span>
+        <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;  Max:         </span><span class="s1">{</span><span class="s0">max</span><span class="s2">(</span><span class="s0">val_snrs</span><span class="s2">)</span><span class="s1">:</span><span class="s4">.2f</span><span class="s1">} </span><span class="s4">dB&quot;</span><span class="s2">)</span>
+        <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;  Final:       </span><span class="s1">{</span><span class="s0">val_snrs</span><span class="s2">[-</span><span class="s3">1</span><span class="s2">]</span><span class="s1">:</span><span class="s4">.2f</span><span class="s1">} </span><span class="s4">dB&quot;</span><span class="s2">)</span>
+        <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;  Mean:        </span><span class="s1">{</span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">val_snrs</span><span class="s2">)</span><span class="s1">:</span><span class="s4">.2f</span><span class="s1">} </span><span class="s4">dB&quot;</span><span class="s2">)</span>
+        <span class="s0">print</span><span class="s2">()</span>
+
+    <span class="s1">if </span><span class="s0">val_psnrs</span><span class="s2">:</span>
+        <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;Validation PSNR:&quot;</span><span class="s2">)</span>
+        <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;  Max:         </span><span class="s1">{</span><span class="s0">max</span><span class="s2">(</span><span class="s0">val_psnrs</span><span class="s2">)</span><span class="s1">:</span><span class="s4">.2f</span><span class="s1">} </span><span class="s4">dB&quot;</span><span class="s2">)</span>
+        <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;  Final:       </span><span class="s1">{</span><span class="s0">val_psnrs</span><span class="s2">[-</span><span class="s3">1</span><span class="s2">]</span><span class="s1">:</span><span class="s4">.2f</span><span class="s1">} </span><span class="s4">dB&quot;</span><span class="s2">)</span>
+        <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;  Mean:        </span><span class="s1">{</span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">val_psnrs</span><span class="s2">)</span><span class="s1">:</span><span class="s4">.2f</span><span class="s1">} </span><span class="s4">dB&quot;</span><span class="s2">)</span>
+        <span class="s0">print</span><span class="s2">()</span>
+
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">&quot;=&quot; </span><span class="s2">* </span><span class="s3">80</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+plot_training_metrics</span><span class="s2">(</span><span class="s0">checkpoint_dir_add</span><span class="s2">, </span><span class="s0">save_fig</span><span class="s2">=</span><span class="s1">False</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+plot_training_metrics</span><span class="s2">(</span><span class="s0">checkpoint_dir_mul</span><span class="s2">, </span><span class="s0">save_fig</span><span class="s2">=</span><span class="s1">False</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s1">def </span><span class="s0">nn_test_single</span><span class="s2">(</span><span class="s0">model</span><span class="s2">, </span><span class="s0">img_np</span><span class="s2">, </span><span class="s0">noise_fn</span><span class="s2">, </span><span class="s0">noise_level</span><span class="s2">, </span><span class="s0">device</span><span class="s2">):</span>
+    <span class="s0">model</span><span class="s2">.</span><span class="s0">eval</span><span class="s2">()</span>
+    <span class="s0">noisy_np </span><span class="s2">= </span><span class="s0">noise_fn</span><span class="s2">(</span><span class="s0">img_np</span><span class="s2">, </span><span class="s0">noise_level</span><span class="s2">)</span>
+
+    <span class="s0">clean_t </span><span class="s2">= </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">tensor</span><span class="s2">(</span><span class="s0">img_np</span><span class="s2">.</span><span class="s0">transpose</span><span class="s2">(</span><span class="s3">2</span><span class="s2">, </span><span class="s3">0</span><span class="s2">, </span><span class="s3">1</span><span class="s2">), </span><span class="s0">dtype</span><span class="s2">=</span><span class="s0">torch</span><span class="s2">.</span><span class="s0">float32</span><span class="s2">).</span><span class="s0">unsqueeze</span><span class="s2">(</span><span class="s3">0</span><span class="s2">).</span><span class="s0">to</span><span class="s2">(</span><span class="s0">device</span><span class="s2">) / </span><span class="s3">255.0</span>
+    <span class="s0">noisy_t </span><span class="s2">= </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">tensor</span><span class="s2">(</span><span class="s0">noisy_np</span><span class="s2">.</span><span class="s0">transpose</span><span class="s2">(</span><span class="s3">2</span><span class="s2">, </span><span class="s3">0</span><span class="s2">, </span><span class="s3">1</span><span class="s2">), </span><span class="s0">dtype</span><span class="s2">=</span><span class="s0">torch</span><span class="s2">.</span><span class="s0">float32</span><span class="s2">).</span><span class="s0">unsqueeze</span><span class="s2">(</span><span class="s3">0</span><span class="s2">).</span><span class="s0">to</span><span class="s2">(</span><span class="s0">device</span><span class="s2">) / </span><span class="s3">255.0</span>
+
+    <span class="s1">with </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">no_grad</span><span class="s2">():</span>
+        <span class="s0">out_t </span><span class="s2">= </span><span class="s0">model</span><span class="s2">(</span><span class="s0">noisy_t</span><span class="s2">).</span><span class="s0">clamp</span><span class="s2">(</span><span class="s3">0.0</span><span class="s2">, </span><span class="s3">1.0</span><span class="s2">)</span>
+
+    <span class="s0">clean_b </span><span class="s2">= </span><span class="s0">clean_t</span><span class="s2">.</span><span class="s0">squeeze</span><span class="s2">(</span><span class="s3">0</span><span class="s2">).</span><span class="s0">cpu</span><span class="s2">()</span>
+    <span class="s0">noisy_b </span><span class="s2">= </span><span class="s0">noisy_t</span><span class="s2">.</span><span class="s0">squeeze</span><span class="s2">(</span><span class="s3">0</span><span class="s2">).</span><span class="s0">cpu</span><span class="s2">()</span>
+    <span class="s0">out_b </span><span class="s2">= </span><span class="s0">out_t</span><span class="s2">.</span><span class="s0">squeeze</span><span class="s2">(</span><span class="s3">0</span><span class="s2">).</span><span class="s0">cpu</span><span class="s2">()</span>
+
+    <span class="s0">psnr_noisy </span><span class="s2">= </span><span class="s0">calculate_psnr</span><span class="s2">(</span><span class="s0">clean_b</span><span class="s2">, </span><span class="s0">noisy_b</span><span class="s2">, </span><span class="s0">max_value</span><span class="s2">=</span><span class="s3">1.0</span><span class="s2">).</span><span class="s0">item</span><span class="s2">()</span>
+    <span class="s0">snr_noisy </span><span class="s2">= </span><span class="s0">calculate_snr</span><span class="s2">(</span><span class="s0">clean_b</span><span class="s2">, </span><span class="s0">noisy_b</span><span class="s2">).</span><span class="s0">item</span><span class="s2">()</span>
+    <span class="s0">psnr_denoised </span><span class="s2">= </span><span class="s0">calculate_psnr</span><span class="s2">(</span><span class="s0">clean_b</span><span class="s2">, </span><span class="s0">out_b</span><span class="s2">, </span><span class="s0">max_value</span><span class="s2">=</span><span class="s3">1.0</span><span class="s2">).</span><span class="s0">item</span><span class="s2">()</span>
+    <span class="s0">snr_denoised </span><span class="s2">= </span><span class="s0">calculate_snr</span><span class="s2">(</span><span class="s0">clean_b</span><span class="s2">, </span><span class="s0">out_b</span><span class="s2">).</span><span class="s0">item</span><span class="s2">()</span>
+
+    <span class="s0">metrics </span><span class="s2">= {</span>
+        <span class="s4">&quot;psnr_noisy&quot;</span><span class="s2">: </span><span class="s0">psnr_noisy</span><span class="s2">,</span>
+        <span class="s4">&quot;snr_noisy&quot;</span><span class="s2">: </span><span class="s0">snr_noisy</span><span class="s2">,</span>
+        <span class="s4">&quot;psnr_denoised&quot;</span><span class="s2">: </span><span class="s0">psnr_denoised</span><span class="s2">,</span>
+        <span class="s4">&quot;snr_denoised&quot;</span><span class="s2">: </span><span class="s0">snr_denoised</span>
+    <span class="s2">}</span>
+
+    <span class="s0">out_np </span><span class="s2">= (</span><span class="s0">out_b</span><span class="s2">.</span><span class="s0">numpy</span><span class="s2">().</span><span class="s0">transpose</span><span class="s2">(</span><span class="s3">1</span><span class="s2">, </span><span class="s3">2</span><span class="s2">, </span><span class="s3">0</span><span class="s2">) * </span><span class="s3">255.0</span><span class="s2">).</span><span class="s0">round</span><span class="s2">().</span><span class="s0">astype</span><span class="s2">(</span><span class="s0">np</span><span class="s2">.</span><span class="s0">uint8</span><span class="s2">)</span>
+
+    <span class="s1">return </span><span class="s0">img_np</span><span class="s2">, </span><span class="s0">noisy_np</span><span class="s2">, </span><span class="s0">out_np</span><span class="s2">, </span><span class="s0">metrics</span>
+
+
+<span class="s1">def </span><span class="s0">evaluate_on_generated_images</span><span class="s2">(</span><span class="s0">model</span><span class="s2">, </span><span class="s0">num_images</span><span class="s2">=</span><span class="s3">1000</span><span class="s2">, </span><span class="s0">noise_fn</span><span class="s2">=</span><span class="s0">noise_mul</span><span class="s2">,</span>
+                                 <span class="s0">img_size</span><span class="s2">=</span><span class="s3">256</span><span class="s2">, </span><span class="s0">device</span><span class="s2">=</span><span class="s4">'cuda'</span><span class="s2">):</span>
+    <span class="s6">&quot;&quot;&quot; 
+    Evaluate model on generated synthetic images. 
+ 
+    Args: 
+        model: Trained denoising model 
+        num_images: Number of images to test on 
+        noise_fn: Noise function to apply 
+        img_size: Size of generated images 
+        device: Device to run on 
+        show_plots: Whether to show distribution plots 
+ 
+    Returns: 
+        dict: Dictionary with average metrics 
+    &quot;&quot;&quot;</span>
+    <span class="s0">model</span><span class="s2">.</span><span class="s0">eval</span><span class="s2">()</span>
+
+    <span class="s0">psnr_noisy_list </span><span class="s2">= []</span>
+    <span class="s0">psnr_denoised_list </span><span class="s2">= []</span>
+    <span class="s0">snr_noisy_list </span><span class="s2">= []</span>
+    <span class="s0">snr_denoised_list </span><span class="s2">= []</span>
+
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;Testing on </span><span class="s1">{</span><span class="s0">num_images</span><span class="s1">} </span><span class="s4">generated images...&quot;</span><span class="s2">)</span>
+
+    <span class="s1">with </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">no_grad</span><span class="s2">():</span>
+        <span class="s1">for </span><span class="s0">i </span><span class="s1">in </span><span class="s0">range</span><span class="s2">(</span><span class="s0">num_images</span><span class="s2">):</span>
+            <span class="s1">if </span><span class="s2">(</span><span class="s0">i </span><span class="s2">+ </span><span class="s3">1</span><span class="s2">) % </span><span class="s3">100 </span><span class="s2">== </span><span class="s3">0</span><span class="s2">:</span>
+                <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;  Progress: </span><span class="s1">{</span><span class="s0">i </span><span class="s2">+ </span><span class="s3">1</span><span class="s1">}</span><span class="s4">/</span><span class="s1">{</span><span class="s0">num_images</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+
+            <span class="s5"># Generate image</span>
+            <span class="s0">img </span><span class="s2">= </span><span class="s0">generate_image</span><span class="s2">(</span><span class="s0">img_size</span><span class="s2">, </span><span class="s0">img_size</span><span class="s2">, </span><span class="s3">5</span><span class="s2">, </span><span class="s3">5</span><span class="s2">, </span><span class="s3">5</span><span class="s2">, </span><span class="s3">5</span><span class="s2">)</span>
+            <span class="s0">noise_level </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">random</span><span class="s2">.</span><span class="s0">uniform</span><span class="s2">(</span><span class="s3">0.1</span><span class="s2">, </span><span class="s3">0.3</span><span class="s2">)</span>
+
+            <span class="s5"># Test</span>
+            <span class="s0">clean</span><span class="s2">, </span><span class="s0">noisy</span><span class="s2">, </span><span class="s0">denoised</span><span class="s2">, </span><span class="s0">metrics </span><span class="s2">= </span><span class="s0">nn_test_single</span><span class="s2">(</span>
+                <span class="s0">model</span><span class="s2">, </span><span class="s0">img</span><span class="s2">, </span><span class="s0">noise_fn</span><span class="s2">, </span><span class="s0">noise_level</span><span class="s2">, </span><span class="s0">device</span>
+            <span class="s2">)</span>
+
+            <span class="s0">psnr_noisy_list</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">metrics</span><span class="s2">[</span><span class="s4">&quot;psnr_noisy&quot;</span><span class="s2">])</span>
+            <span class="s0">psnr_denoised_list</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">metrics</span><span class="s2">[</span><span class="s4">&quot;psnr_denoised&quot;</span><span class="s2">])</span>
+            <span class="s0">snr_noisy_list</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">metrics</span><span class="s2">[</span><span class="s4">&quot;snr_noisy&quot;</span><span class="s2">])</span>
+            <span class="s0">snr_denoised_list</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">metrics</span><span class="s2">[</span><span class="s4">&quot;snr_denoised&quot;</span><span class="s2">])</span>
+
+    <span class="s5"># Calculate statistics</span>
+    <span class="s0">results </span><span class="s2">= {</span>
+        <span class="s4">'psnr_noisy_mean'</span><span class="s2">: </span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">psnr_noisy_list</span><span class="s2">),</span>
+        <span class="s4">'psnr_noisy_std'</span><span class="s2">: </span><span class="s0">np</span><span class="s2">.</span><span class="s0">std</span><span class="s2">(</span><span class="s0">psnr_noisy_list</span><span class="s2">),</span>
+        <span class="s4">'psnr_denoised_mean'</span><span class="s2">: </span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">psnr_denoised_list</span><span class="s2">),</span>
+        <span class="s4">'psnr_denoised_std'</span><span class="s2">: </span><span class="s0">np</span><span class="s2">.</span><span class="s0">std</span><span class="s2">(</span><span class="s0">psnr_denoised_list</span><span class="s2">),</span>
+        <span class="s4">'snr_noisy_mean'</span><span class="s2">: </span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">snr_noisy_list</span><span class="s2">),</span>
+        <span class="s4">'snr_noisy_std'</span><span class="s2">: </span><span class="s0">np</span><span class="s2">.</span><span class="s0">std</span><span class="s2">(</span><span class="s0">snr_noisy_list</span><span class="s2">),</span>
+        <span class="s4">'snr_denoised_mean'</span><span class="s2">: </span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">snr_denoised_list</span><span class="s2">),</span>
+        <span class="s4">'snr_denoised_std'</span><span class="s2">: </span><span class="s0">np</span><span class="s2">.</span><span class="s0">std</span><span class="s2">(</span><span class="s0">snr_denoised_list</span><span class="s2">),</span>
+        <span class="s4">'psnr_improvement'</span><span class="s2">: </span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">psnr_denoised_list</span><span class="s2">) - </span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">psnr_noisy_list</span><span class="s2">),</span>
+        <span class="s4">'snr_improvement'</span><span class="s2">: </span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">snr_denoised_list</span><span class="s2">) - </span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">snr_noisy_list</span><span class="s2">),</span>
+        <span class="s4">'psnr_noisy_list'</span><span class="s2">: </span><span class="s0">psnr_noisy_list</span><span class="s2">,</span>
+        <span class="s4">'psnr_denoised_list'</span><span class="s2">: </span><span class="s0">psnr_denoised_list</span><span class="s2">,</span>
+        <span class="s4">'snr_noisy_list'</span><span class="s2">: </span><span class="s0">snr_noisy_list</span><span class="s2">,</span>
+        <span class="s4">'snr_denoised_list'</span><span class="s2">: </span><span class="s0">snr_denoised_list</span>
+    <span class="s2">}</span>
+
+    <span class="s5"># Print results</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;</span><span class="s1">\n{</span><span class="s4">'=' </span><span class="s2">* </span><span class="s3">70</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;EVALUATION RESULTS - GENERATED IMAGES (</span><span class="s1">{</span><span class="s0">num_images</span><span class="s1">} </span><span class="s4">samples)&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;</span><span class="s1">{</span><span class="s4">'=' </span><span class="s2">* </span><span class="s3">70</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;Average PSNR (noisy):     </span><span class="s1">{</span><span class="s0">results</span><span class="s2">[</span><span class="s4">'psnr_noisy_mean'</span><span class="s2">]</span><span class="s1">:</span><span class="s4">.2f</span><span class="s1">} </span><span class="s4">± </span><span class="s1">{</span><span class="s0">results</span><span class="s2">[</span><span class="s4">'psnr_noisy_std'</span><span class="s2">]</span><span class="s1">:</span><span class="s4">.2f</span><span class="s1">} </span><span class="s4">dB&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;Average PSNR (denoised):  </span><span class="s1">{</span><span class="s0">results</span><span class="s2">[</span><span class="s4">'psnr_denoised_mean'</span><span class="s2">]</span><span class="s1">:</span><span class="s4">.2f</span><span class="s1">} </span><span class="s4">± </span><span class="s1">{</span><span class="s0">results</span><span class="s2">[</span><span class="s4">'psnr_denoised_std'</span><span class="s2">]</span><span class="s1">:</span><span class="s4">.2f</span><span class="s1">} </span><span class="s4">dB&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;Average SNR  (noisy):     </span><span class="s1">{</span><span class="s0">results</span><span class="s2">[</span><span class="s4">'snr_noisy_mean'</span><span class="s2">]</span><span class="s1">:</span><span class="s4">.2f</span><span class="s1">} </span><span class="s4">± </span><span class="s1">{</span><span class="s0">results</span><span class="s2">[</span><span class="s4">'snr_noisy_std'</span><span class="s2">]</span><span class="s1">:</span><span class="s4">.2f</span><span class="s1">} </span><span class="s4">dB&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;Average SNR  (denoised):  </span><span class="s1">{</span><span class="s0">results</span><span class="s2">[</span><span class="s4">'snr_denoised_mean'</span><span class="s2">]</span><span class="s1">:</span><span class="s4">.2f</span><span class="s1">} </span><span class="s4">± </span><span class="s1">{</span><span class="s0">results</span><span class="s2">[</span><span class="s4">'snr_denoised_std'</span><span class="s2">]</span><span class="s1">:</span><span class="s4">.2f</span><span class="s1">} </span><span class="s4">dB&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;</span><span class="s1">{</span><span class="s4">'=' </span><span class="s2">* </span><span class="s3">70</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;PSNR improvement:         </span><span class="s1">{</span><span class="s0">results</span><span class="s2">[</span><span class="s4">'psnr_improvement'</span><span class="s2">]</span><span class="s1">:</span><span class="s4">.2f</span><span class="s1">} </span><span class="s4">dB&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;SNR improvement:          </span><span class="s1">{</span><span class="s0">results</span><span class="s2">[</span><span class="s4">'snr_improvement'</span><span class="s2">]</span><span class="s1">:</span><span class="s4">.2f</span><span class="s1">} </span><span class="s4">dB&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s4">f&quot;</span><span class="s1">{</span><span class="s4">'=' </span><span class="s2">* </span><span class="s3">70</span><span class="s1">}\n</span><span class="s4">&quot;</span><span class="s2">)</span>
+
+    <span class="s1">return </span><span class="s0">results</span><hr class="ls0"><span class="s0">#%% 
+results </span><span class="s2">= </span><span class="s0">evaluate_on_generated_images</span><span class="s2">(</span>
+    <span class="s0">model_add</span><span class="s2">,</span>
+    <span class="s0">num_images</span><span class="s2">=</span><span class="s3">1000</span><span class="s2">,</span>
+    <span class="s0">noise_fn</span><span class="s2">=</span><span class="s0">noise_add</span><span class="s2">,</span>
+    <span class="s0">img_size</span><span class="s2">=</span><span class="s3">256</span><span class="s2">,</span>
+    <span class="s0">device</span><span class="s2">=</span><span class="s0">device</span><span class="s2">,</span>
+<span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+results </span><span class="s2">= </span><span class="s0">evaluate_on_generated_images</span><span class="s2">(</span>
+    <span class="s0">model_mul</span><span class="s2">,</span>
+    <span class="s0">num_images</span><span class="s2">=</span><span class="s3">1000</span><span class="s2">,</span>
+    <span class="s0">noise_fn</span><span class="s2">=</span><span class="s0">noise_mul</span><span class="s2">,</span>
+    <span class="s0">img_size</span><span class="s2">=</span><span class="s3">256</span><span class="s2">,</span>
+    <span class="s0">device</span><span class="s2">=</span><span class="s0">device</span><span class="s2">,</span>
+<span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s1">def </span><span class="s0">visualize_denoising_samples</span><span class="s2">(</span><span class="s0">model</span><span class="s2">, </span><span class="s0">num_samples</span><span class="s2">=</span><span class="s3">5</span><span class="s2">, </span><span class="s0">noise_fn</span><span class="s2">=</span><span class="s0">noise_mul</span><span class="s2">,</span>
+                                <span class="s0">img_size</span><span class="s2">=</span><span class="s3">256</span><span class="s2">, </span><span class="s0">device</span><span class="s2">=</span><span class="s4">'cuda'</span><span class="s2">):</span>
+    <span class="s6">&quot;&quot;&quot; 
+    Visualize denoising results on sample images. 
+ 
+    Args: 
+        model: Trained denoising model 
+        num_samples: Number of test samples to display 
+        noise_fn: Noise function to apply 
+        img_size: Size of generated images 
+        device: Device to run on 
+ 
+    Returns: 
+        dict: Dictionary with metrics lists 
+    &quot;&quot;&quot;</span>
+    <span class="s0">model</span><span class="s2">.</span><span class="s0">eval</span><span class="s2">()</span>
+
+    <span class="s5"># Handle plot layout</span>
+    <span class="s1">if </span><span class="s0">num_samples </span><span class="s2">== </span><span class="s3">1</span><span class="s2">:</span>
+        <span class="s0">fig</span><span class="s2">, </span><span class="s0">axes </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s3">1</span><span class="s2">, </span><span class="s3">3</span><span class="s2">, </span><span class="s0">figsize</span><span class="s2">=(</span><span class="s3">12</span><span class="s2">, </span><span class="s3">4</span><span class="s2">))</span>
+        <span class="s0">axes </span><span class="s2">= [</span><span class="s0">axes</span><span class="s2">]</span>
+    <span class="s1">else</span><span class="s2">:</span>
+        <span class="s0">fig</span><span class="s2">, </span><span class="s0">axes </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s0">num_samples</span><span class="s2">, </span><span class="s3">3</span><span class="s2">, </span><span class="s0">figsize</span><span class="s2">=(</span><span class="s3">12</span><span class="s2">, </span><span class="s3">4 </span><span class="s2">* </span><span class="s0">num_samples</span><span class="s2">))</span>
+
+    <span class="s0">psnr_noisy_list </span><span class="s2">= []</span>
+    <span class="s0">psnr_denoised_list </span><span class="s2">= []</span>
+    <span class="s0">snr_noisy_list </span><span class="s2">= []</span>
+    <span class="s0">snr_denoised_list </span><span class="s2">= []</span>
+
+    <span class="s1">with </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">no_grad</span><span class="s2">():</span>
+        <span class="s1">for </span><span class="s0">i </span><span class="s1">in </span><span class="s0">range</span><span class="s2">(</span><span class="s0">num_samples</span><span class="s2">):</span>
+            <span class="s5"># Generate image and add noise</span>
+            <span class="s0">img </span><span class="s2">= </span><span class="s0">generate_image</span><span class="s2">(</span><span class="s0">img_size</span><span class="s2">, </span><span class="s0">img_size</span><span class="s2">, </span><span class="s3">5</span><span class="s2">, </span><span class="s3">5</span><span class="s2">, </span><span class="s3">5</span><span class="s2">, </span><span class="s3">5</span><span class="s2">)</span>
+            <span class="s0">noise_level </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">random</span><span class="s2">.</span><span class="s0">uniform</span><span class="s2">(</span><span class="s3">0.1</span><span class="s2">, </span><span class="s3">0.3</span><span class="s2">)</span>
+
+            <span class="s5"># Test denoising</span>
+            <span class="s0">clean</span><span class="s2">, </span><span class="s0">noisy</span><span class="s2">, </span><span class="s0">denoised</span><span class="s2">, </span><span class="s0">metrics </span><span class="s2">= </span><span class="s0">nn_test_single</span><span class="s2">(</span>
+                <span class="s0">model</span><span class="s2">, </span><span class="s0">img</span><span class="s2">, </span><span class="s0">noise_fn</span><span class="s2">, </span><span class="s0">noise_level</span><span class="s2">, </span><span class="s0">device</span>
+            <span class="s2">)</span>
+
+            <span class="s5"># Collect metrics</span>
+            <span class="s0">psnr_noisy_list</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">metrics</span><span class="s2">[</span><span class="s4">&quot;psnr_noisy&quot;</span><span class="s2">])</span>
+            <span class="s0">psnr_denoised_list</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">metrics</span><span class="s2">[</span><span class="s4">&quot;psnr_denoised&quot;</span><span class="s2">])</span>
+            <span class="s0">snr_noisy_list</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">metrics</span><span class="s2">[</span><span class="s4">&quot;snr_noisy&quot;</span><span class="s2">])</span>
+            <span class="s0">snr_denoised_list</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">metrics</span><span class="s2">[</span><span class="s4">&quot;snr_denoised&quot;</span><span class="s2">])</span>
+
+            <span class="s5"># Plot images</span>
+            <span class="s0">ax0</span><span class="s2">, </span><span class="s0">ax1</span><span class="s2">, </span><span class="s0">ax2 </span><span class="s2">= </span><span class="s0">axes</span><span class="s2">[</span><span class="s0">i</span><span class="s2">] </span><span class="s1">if </span><span class="s0">num_samples </span><span class="s2">&gt; </span><span class="s3">1 </span><span class="s1">else </span><span class="s0">axes</span><span class="s2">[</span><span class="s3">0</span><span class="s2">]</span>
+
+            <span class="s0">ax0</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">clean</span><span class="s2">)</span>
+            <span class="s0">ax0</span><span class="s2">.</span><span class="s0">set_title</span><span class="s2">(</span><span class="s4">f&quot;Clean</span><span class="s1">\n</span><span class="s4">Noise Level: </span><span class="s1">{</span><span class="s0">noise_level</span><span class="s1">:</span><span class="s4">.3f</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+            <span class="s0">ax0</span><span class="s2">.</span><span class="s0">axis</span><span class="s2">(</span><span class="s4">&quot;off&quot;</span><span class="s2">)</span>
+
+            <span class="s0">ax1</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">noisy</span><span class="s2">)</span>
+            <span class="s0">ax1</span><span class="s2">.</span><span class="s0">set_title</span><span class="s2">(</span><span class="s4">f&quot;Noisy</span><span class="s1">\n</span><span class="s4">PSNR: </span><span class="s1">{</span><span class="s0">metrics</span><span class="s2">[</span><span class="s4">'psnr_noisy'</span><span class="s2">]</span><span class="s1">:</span><span class="s4">.2f</span><span class="s1">} </span><span class="s4">dB</span><span class="s1">\n</span><span class="s4">SNR: </span><span class="s1">{</span><span class="s0">metrics</span><span class="s2">[</span><span class="s4">'snr_noisy'</span><span class="s2">]</span><span class="s1">:</span><span class="s4">.2f</span><span class="s1">} </span><span class="s4">dB&quot;</span><span class="s2">)</span>
+            <span class="s0">ax1</span><span class="s2">.</span><span class="s0">axis</span><span class="s2">(</span><span class="s4">&quot;off&quot;</span><span class="s2">)</span>
+
+            <span class="s0">ax2</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">denoised</span><span class="s2">)</span>
+            <span class="s0">ax2</span><span class="s2">.</span><span class="s0">set_title</span><span class="s2">(</span><span class="s4">f&quot;Denoised</span><span class="s1">\n</span><span class="s4">PSNR: </span><span class="s1">{</span><span class="s0">metrics</span><span class="s2">[</span><span class="s4">'psnr_denoised'</span><span class="s2">]</span><span class="s1">:</span><span class="s4">.2f</span><span class="s1">} </span><span class="s4">dB</span><span class="s1">\n</span><span class="s4">SNR: </span><span class="s1">{</span><span class="s0">metrics</span><span class="s2">[</span><span class="s4">'snr_denoised'</span><span class="s2">]</span><span class="s1">:</span><span class="s4">.2f</span><span class="s1">} </span><span class="s4">dB&quot;</span><span class="s2">)</span>
+            <span class="s0">ax2</span><span class="s2">.</span><span class="s0">axis</span><span class="s2">(</span><span class="s4">&quot;off&quot;</span><span class="s2">)</span>
+
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span>
+
+    <span class="s5"># Return metrics for further analysis if needed</span>
+    <span class="s1">return </span><span class="s2">{</span>
+        <span class="s4">'psnr_noisy_list'</span><span class="s2">: </span><span class="s0">psnr_noisy_list</span><span class="s2">,</span>
+        <span class="s4">'psnr_denoised_list'</span><span class="s2">: </span><span class="s0">psnr_denoised_list</span><span class="s2">,</span>
+        <span class="s4">'snr_noisy_list'</span><span class="s2">: </span><span class="s0">snr_noisy_list</span><span class="s2">,</span>
+        <span class="s4">'snr_denoised_list'</span><span class="s2">: </span><span class="s0">snr_denoised_list</span>
+    <span class="s2">}</span><hr class="ls0"><span class="s0">#%% 
+results </span><span class="s2">= </span><span class="s0">visualize_denoising_samples</span><span class="s2">(</span><span class="s0">model_add</span><span class="s2">, </span><span class="s0">num_samples</span><span class="s2">=</span><span class="s3">5</span><span class="s2">, </span><span class="s0">noise_fn</span><span class="s2">=</span><span class="s0">noise_mul</span><span class="s2">, </span><span class="s0">device</span><span class="s2">=</span><span class="s0">device</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+results </span><span class="s2">= </span><span class="s0">visualize_denoising_samples</span><span class="s2">(</span><span class="s0">model_mul</span><span class="s2">, </span><span class="s0">num_samples</span><span class="s2">=</span><span class="s3">5</span><span class="s2">, </span><span class="s0">noise_fn</span><span class="s2">=</span><span class="s0">noise_mul</span><span class="s2">, </span><span class="s0">device</span><span class="s2">=</span><span class="s0">device</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s1">def </span><span class="s0">visualize_filter_weights</span><span class="s2">(</span><span class="s0">model</span><span class="s2">, </span><span class="s0">input_image</span><span class="s2">, </span><span class="s0">device</span><span class="s2">):</span>
+    <span class="s0">model</span><span class="s2">.</span><span class="s0">eval</span><span class="s2">()</span>
+    <span class="s1">with </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">no_grad</span><span class="s2">():</span>
+        <span class="s0">x </span><span class="s2">= </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">tensor</span><span class="s2">(</span><span class="s0">input_image</span><span class="s2">.</span><span class="s0">transpose</span><span class="s2">(</span><span class="s3">2</span><span class="s2">, </span><span class="s3">0</span><span class="s2">, </span><span class="s3">1</span><span class="s2">), </span><span class="s0">dtype</span><span class="s2">=</span><span class="s0">torch</span><span class="s2">.</span><span class="s0">float32</span><span class="s2">).</span><span class="s0">unsqueeze</span><span class="s2">(</span><span class="s3">0</span><span class="s2">).</span><span class="s0">to</span><span class="s2">(</span><span class="s0">device</span><span class="s2">) / </span><span class="s3">255.0</span>
+        <span class="s0">filtered </span><span class="s2">= </span><span class="s0">model</span><span class="s2">.</span><span class="s0">filter_branch</span><span class="s2">(</span><span class="s0">x</span><span class="s2">)  </span><span class="s5"># (1, 3, 8, H, W)</span>
+        <span class="s0">weights </span><span class="s2">= </span><span class="s0">model</span><span class="s2">.</span><span class="s0">weight_branch</span><span class="s2">(</span><span class="s0">x</span><span class="s2">)[</span><span class="s3">0</span><span class="s2">]  </span><span class="s5"># (8, H, W)</span>
+
+    <span class="s0">R_filtered </span><span class="s2">= </span><span class="s0">filtered</span><span class="s2">[</span><span class="s3">0</span><span class="s2">, </span><span class="s3">0</span><span class="s2">]</span>
+
+    <span class="s0">fig</span><span class="s2">, </span><span class="s0">axes </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s3">3</span><span class="s2">, </span><span class="s3">3</span><span class="s2">, </span><span class="s0">figsize</span><span class="s2">=(</span><span class="s3">10</span><span class="s2">, </span><span class="s3">10</span><span class="s2">))</span>
+    <span class="s0">axes </span><span class="s2">= </span><span class="s0">axes</span><span class="s2">.</span><span class="s0">ravel</span><span class="s2">()</span>
+    <span class="s1">for </span><span class="s0">i </span><span class="s1">in </span><span class="s0">range</span><span class="s2">(</span><span class="s3">8</span><span class="s2">):</span>
+        <span class="s0">weighted_response </span><span class="s2">= </span><span class="s0">R_filtered</span><span class="s2">[</span><span class="s0">i</span><span class="s2">].</span><span class="s0">cpu</span><span class="s2">().</span><span class="s0">numpy</span><span class="s2">() * </span><span class="s0">weights</span><span class="s2">[</span><span class="s0">i</span><span class="s2">].</span><span class="s0">cpu</span><span class="s2">().</span><span class="s0">numpy</span><span class="s2">()</span>
+        <span class="s0">axes</span><span class="s2">[</span><span class="s0">i</span><span class="s2">].</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">weighted_response</span><span class="s2">, </span><span class="s0">cmap</span><span class="s2">=</span><span class="s4">'gray'</span><span class="s2">)</span>
+        <span class="s0">axes</span><span class="s2">[</span><span class="s0">i</span><span class="s2">].</span><span class="s0">set_title</span><span class="s2">(</span><span class="s4">f'filter </span><span class="s1">{</span><span class="s0">i</span><span class="s1">} </span><span class="s4">× weight </span><span class="s1">{</span><span class="s0">i</span><span class="s1">}</span><span class="s4">'</span><span class="s2">)</span>
+        <span class="s0">axes</span><span class="s2">[</span><span class="s0">i</span><span class="s2">].</span><span class="s0">axis</span><span class="s2">(</span><span class="s4">'off'</span><span class="s2">)</span>
+    <span class="s0">axes</span><span class="s2">[</span><span class="s3">8</span><span class="s2">].</span><span class="s0">axis</span><span class="s2">(</span><span class="s4">'off'</span><span class="s2">)</span>
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span><hr class="ls0"><span class="s0">#%% 
+visualize_filter_weights</span><span class="s2">(</span><span class="s0">model_add</span><span class="s2">, </span><span class="s0">generate_image</span><span class="s2">(</span><span class="s3">256</span><span class="s2">, </span><span class="s3">256</span><span class="s2">, </span><span class="s3">5</span><span class="s2">, </span><span class="s3">5</span><span class="s2">, </span><span class="s3">5</span><span class="s2">, </span><span class="s3">5</span><span class="s2">), </span><span class="s0">device</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+visualize_filter_weights</span><span class="s2">(</span><span class="s0">model_mul</span><span class="s2">, </span><span class="s0">generate_image</span><span class="s2">(</span><span class="s3">256</span><span class="s2">, </span><span class="s3">256</span><span class="s2">, </span><span class="s3">5</span><span class="s2">, </span><span class="s3">5</span><span class="s2">, </span><span class="s3">5</span><span class="s2">, </span><span class="s3">5</span><span class="s2">), </span><span class="s0">device</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s1">def </span><span class="s0">plot_all_channel_filters</span><span class="s2">(</span><span class="s0">model</span><span class="s2">):</span>
+    <span class="s6">&quot;&quot;&quot; 
+    Display all learned filters from the FilterBranch for R, G, B channels. 
+ 
+    Args: 
+        model: Model containing filter_branch with R_conv, G_conv, B_conv 
+    &quot;&quot;&quot;</span>
+    <span class="s0">fb </span><span class="s2">= </span><span class="s0">model</span><span class="s2">.</span><span class="s0">filter_branch</span>
+
+    <span class="s5"># Extract weights for all channels</span>
+    <span class="s0">channels </span><span class="s2">= {</span>
+        <span class="s4">'R'</span><span class="s2">: </span><span class="s0">fb</span><span class="s2">.</span><span class="s0">R_conv</span><span class="s2">.</span><span class="s0">weight</span><span class="s2">.</span><span class="s0">data</span><span class="s2">.</span><span class="s0">cpu</span><span class="s2">().</span><span class="s0">squeeze</span><span class="s2">(</span><span class="s3">1</span><span class="s2">),  </span><span class="s5"># (n_filters, 11, 11)</span>
+        <span class="s4">'G'</span><span class="s2">: </span><span class="s0">fb</span><span class="s2">.</span><span class="s0">G_conv</span><span class="s2">.</span><span class="s0">weight</span><span class="s2">.</span><span class="s0">data</span><span class="s2">.</span><span class="s0">cpu</span><span class="s2">().</span><span class="s0">squeeze</span><span class="s2">(</span><span class="s3">1</span><span class="s2">),</span>
+        <span class="s4">'B'</span><span class="s2">: </span><span class="s0">fb</span><span class="s2">.</span><span class="s0">B_conv</span><span class="s2">.</span><span class="s0">weight</span><span class="s2">.</span><span class="s0">data</span><span class="s2">.</span><span class="s0">cpu</span><span class="s2">().</span><span class="s0">squeeze</span><span class="s2">(</span><span class="s3">1</span><span class="s2">)</span>
+    <span class="s2">}</span>
+
+    <span class="s5"># Get number of filters (assuming same for all channels)</span>
+    <span class="s0">n_filters </span><span class="s2">= </span><span class="s0">channels</span><span class="s2">[</span><span class="s4">'R'</span><span class="s2">].</span><span class="s0">shape</span><span class="s2">[</span><span class="s3">0</span><span class="s2">]</span>
+
+    <span class="s5"># Create figure with 3 rows (one per channel) - add extra width for labels</span>
+    <span class="s0">fig</span><span class="s2">, </span><span class="s0">axes </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s3">3</span><span class="s2">, </span><span class="s0">n_filters</span><span class="s2">, </span><span class="s0">figsize</span><span class="s2">=(</span><span class="s0">n_filters </span><span class="s2">* </span><span class="s3">1.5 </span><span class="s2">+ </span><span class="s3">2</span><span class="s2">, </span><span class="s3">6</span><span class="s2">))</span>
+
+    <span class="s5"># Adjust layout to make room for labels on the left</span>
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots_adjust</span><span class="s2">(</span><span class="s0">left</span><span class="s2">=</span><span class="s3">0.08</span><span class="s2">, </span><span class="s0">right</span><span class="s2">=</span><span class="s3">0.98</span><span class="s2">, </span><span class="s0">top</span><span class="s2">=</span><span class="s3">0.93</span><span class="s2">, </span><span class="s0">bottom</span><span class="s2">=</span><span class="s3">0.05</span><span class="s2">)</span>
+
+    <span class="s5"># Channel colors for labels</span>
+    <span class="s0">channel_colors </span><span class="s2">= {</span><span class="s4">'R'</span><span class="s2">: </span><span class="s4">'red'</span><span class="s2">, </span><span class="s4">'G'</span><span class="s2">: </span><span class="s4">'green'</span><span class="s2">, </span><span class="s4">'B'</span><span class="s2">: </span><span class="s4">'blue'</span><span class="s2">}</span>
+    <span class="s0">channel_names </span><span class="s2">= {</span><span class="s4">'R'</span><span class="s2">: </span><span class="s4">'Red Channel'</span><span class="s2">, </span><span class="s4">'G'</span><span class="s2">: </span><span class="s4">'Green Channel'</span><span class="s2">, </span><span class="s4">'B'</span><span class="s2">: </span><span class="s4">'Blue Channel'</span><span class="s2">}</span>
+
+    <span class="s5"># Plot filters for each channel</span>
+    <span class="s1">for </span><span class="s0">row_idx</span><span class="s2">, (</span><span class="s0">channel_name</span><span class="s2">, </span><span class="s0">weights</span><span class="s2">) </span><span class="s1">in </span><span class="s0">enumerate</span><span class="s2">(</span><span class="s0">channels</span><span class="s2">.</span><span class="s0">items</span><span class="s2">()):</span>
+        <span class="s1">for </span><span class="s0">col_idx </span><span class="s1">in </span><span class="s0">range</span><span class="s2">(</span><span class="s0">n_filters</span><span class="s2">):</span>
+            <span class="s0">ax </span><span class="s2">= </span><span class="s0">axes</span><span class="s2">[</span><span class="s0">row_idx</span><span class="s2">, </span><span class="s0">col_idx</span><span class="s2">]</span>
+            <span class="s0">ax</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">weights</span><span class="s2">[</span><span class="s0">col_idx</span><span class="s2">], </span><span class="s0">cmap</span><span class="s2">=</span><span class="s4">'gray'</span><span class="s2">, </span><span class="s0">interpolation</span><span class="s2">=</span><span class="s4">'nearest'</span><span class="s2">)</span>
+            <span class="s0">ax</span><span class="s2">.</span><span class="s0">axis</span><span class="s2">(</span><span class="s4">'off'</span><span class="s2">)</span>
+
+            <span class="s5"># Add filter number only to top row</span>
+            <span class="s1">if </span><span class="s0">row_idx </span><span class="s2">== </span><span class="s3">0</span><span class="s2">:</span>
+                <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_title</span><span class="s2">(</span><span class="s4">f'F</span><span class="s1">{</span><span class="s0">col_idx</span><span class="s1">}</span><span class="s4">'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">9</span><span class="s2">, </span><span class="s0">pad</span><span class="s2">=</span><span class="s3">5</span><span class="s2">)</span>
+
+        <span class="s5"># Add color-coded text label on the left side using fig.text</span>
+        <span class="s0">fig</span><span class="s2">.</span><span class="s0">text</span><span class="s2">(</span><span class="s3">0.02</span><span class="s2">, </span><span class="s3">0.83 </span><span class="s2">- (</span><span class="s0">row_idx </span><span class="s2">* </span><span class="s3">0.315</span><span class="s2">), </span><span class="s0">channel_names</span><span class="s2">[</span><span class="s0">channel_name</span><span class="s2">],</span>
+                 <span class="s0">fontsize</span><span class="s2">=</span><span class="s3">13</span><span class="s2">,</span>
+                 <span class="s0">color</span><span class="s2">=</span><span class="s0">channel_colors</span><span class="s2">[</span><span class="s0">channel_name</span><span class="s2">],</span>
+                 <span class="s0">fontweight</span><span class="s2">=</span><span class="s4">'bold'</span><span class="s2">,</span>
+                 <span class="s0">va</span><span class="s2">=</span><span class="s4">'center'</span><span class="s2">,</span>
+                 <span class="s0">rotation</span><span class="s2">=</span><span class="s3">90</span><span class="s2">)</span>
+
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">suptitle</span><span class="s2">(</span><span class="s4">'Learned Filters per Channel'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">14</span><span class="s2">, </span><span class="s0">fontweight</span><span class="s2">=</span><span class="s4">'bold'</span><span class="s2">)</span>
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span>
+
+    <span class="s5"># Return all filters as dictionary</span>
+    <span class="s1">return </span><span class="s2">{</span><span class="s0">k</span><span class="s2">: </span><span class="s0">v</span><span class="s2">.</span><span class="s0">numpy</span><span class="s2">() </span><span class="s1">for </span><span class="s0">k</span><span class="s2">, </span><span class="s0">v </span><span class="s1">in </span><span class="s0">channels</span><span class="s2">.</span><span class="s0">items</span><span class="s2">()}</span><hr class="ls0"><span class="s0">#%% 
+filters </span><span class="s2">= </span><span class="s0">plot_all_channel_filters</span><span class="s2">(</span><span class="s0">model_add</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+filters </span><span class="s2">= </span><span class="s0">plot_all_channel_filters</span><span class="s2">(</span><span class="s0">model_mul</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s1">import </span><span class="s0">os</span>
+<span class="s1">from </span><span class="s0">PIL </span><span class="s1">import </span><span class="s0">Image</span>
+<span class="s1">import </span><span class="s0">torch</span>
+<span class="s1">import </span><span class="s0">torchvision</span><span class="s2">.</span><span class="s0">transforms </span><span class="s1">as </span><span class="s0">transforms</span>
+
+<span class="s1">def </span><span class="s0">load_and_prepare_image</span><span class="s2">(</span><span class="s0">image_path</span><span class="s2">, </span><span class="s0">target_size</span><span class="s2">=</span><span class="s3">256</span><span class="s2">):</span>
+    <span class="s6">&quot;&quot;&quot; 
+    Load image and prepare it for the model. 
+ 
+    Args: 
+        image_path: Path to the image file 
+        target_size: Target size for center crop (default 256) 
+ 
+    Returns: 
+        tuple: (original_pil_image, model_ready_tensor) 
+    &quot;&quot;&quot;</span>
+    <span class="s5"># Load image</span>
+    <span class="s0">img </span><span class="s2">= </span><span class="s0">Image</span><span class="s2">.</span><span class="s0">open</span><span class="s2">(</span><span class="s0">image_path</span><span class="s2">).</span><span class="s0">convert</span><span class="s2">(</span><span class="s4">'RGB'</span><span class="s2">)</span>
+
+    <span class="s5"># Center crop to target size</span>
+    <span class="s0">transform </span><span class="s2">= </span><span class="s0">transforms</span><span class="s2">.</span><span class="s0">Compose</span><span class="s2">([</span>
+        <span class="s0">transforms</span><span class="s2">.</span><span class="s0">CenterCrop</span><span class="s2">(</span><span class="s0">target_size</span><span class="s2">),</span>
+        <span class="s0">transforms</span><span class="s2">.</span><span class="s0">ToTensor</span><span class="s2">()  </span><span class="s5"># Converts to [0, 1] range</span>
+    <span class="s2">])</span>
+
+    <span class="s0">img_tensor </span><span class="s2">= </span><span class="s0">transform</span><span class="s2">(</span><span class="s0">img</span><span class="s2">)</span>
+
+    <span class="s5"># Get cropped PIL image for visualization</span>
+    <span class="s0">img_cropped </span><span class="s2">= </span><span class="s0">transforms</span><span class="s2">.</span><span class="s0">CenterCrop</span><span class="s2">(</span><span class="s0">target_size</span><span class="s2">)(</span><span class="s0">img</span><span class="s2">)</span>
+
+    <span class="s1">return </span><span class="s0">img_cropped</span><span class="s2">, </span><span class="s0">img_tensor</span>
+
+<span class="s1">def </span><span class="s0">process_real_image</span><span class="s2">(</span><span class="s0">model</span><span class="s2">, </span><span class="s0">image_path</span><span class="s2">, </span><span class="s0">device</span><span class="s2">=</span><span class="s4">'cuda'</span><span class="s2">):</span>
+    <span class="s6">&quot;&quot;&quot; 
+    Process a real image through the denoising model. 
+ 
+    Args: 
+        model: Trained denoising model 
+        image_path: Path to image 
+        device: Device to run on 
+ 
+    Returns: 
+        tuple: (original_np, processed_np) 
+    &quot;&quot;&quot;</span>
+    <span class="s0">model</span><span class="s2">.</span><span class="s0">eval</span><span class="s2">()</span>
+
+    <span class="s5"># Load and prepare image</span>
+    <span class="s0">img_pil</span><span class="s2">, </span><span class="s0">img_tensor </span><span class="s2">= </span><span class="s0">load_and_prepare_image</span><span class="s2">(</span><span class="s0">image_path</span><span class="s2">)</span>
+
+    <span class="s5"># Convert to numpy for visualization (H, W, C)</span>
+    <span class="s0">original_np </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">array</span><span class="s2">(</span><span class="s0">img_pil</span><span class="s2">) / </span><span class="s3">255.0</span>
+
+    <span class="s5"># Add batch dimension and move to device</span>
+    <span class="s0">img_batch </span><span class="s2">= </span><span class="s0">img_tensor</span><span class="s2">.</span><span class="s0">unsqueeze</span><span class="s2">(</span><span class="s3">0</span><span class="s2">).</span><span class="s0">to</span><span class="s2">(</span><span class="s0">device</span><span class="s2">)</span>
+
+    <span class="s1">with </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">no_grad</span><span class="s2">():</span>
+        <span class="s5"># Process through model</span>
+        <span class="s0">processed </span><span class="s2">= </span><span class="s0">model</span><span class="s2">(</span><span class="s0">img_batch</span><span class="s2">)</span>
+
+        <span class="s5"># Convert back to numpy (H, W, C)</span>
+        <span class="s0">processed_np </span><span class="s2">= </span><span class="s0">processed</span><span class="s2">.</span><span class="s0">squeeze</span><span class="s2">(</span><span class="s3">0</span><span class="s2">).</span><span class="s0">cpu</span><span class="s2">().</span><span class="s0">numpy</span><span class="s2">().</span><span class="s0">transpose</span><span class="s2">(</span><span class="s3">1</span><span class="s2">, </span><span class="s3">2</span><span class="s2">, </span><span class="s3">0</span><span class="s2">)</span>
+        <span class="s0">processed_np </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">clip</span><span class="s2">(</span><span class="s0">processed_np</span><span class="s2">, </span><span class="s3">0</span><span class="s2">, </span><span class="s3">1</span><span class="s2">)</span>
+
+    <span class="s1">return </span><span class="s0">original_np</span><span class="s2">, </span><span class="s0">processed_np</span>
+
+<span class="s1">def </span><span class="s0">visualize_real_image_results</span><span class="s2">(</span><span class="s0">model</span><span class="s2">, </span><span class="s0">image_paths</span><span class="s2">, </span><span class="s0">device</span><span class="s2">=</span><span class="s4">'cuda'</span><span class="s2">):</span>
+    <span class="s6">&quot;&quot;&quot; 
+    Visualize original vs processed images for multiple real images. 
+ 
+    Args: 
+        model: Trained denoising model 
+        image_paths: List of image paths to process 
+        device: Device to run on 
+    &quot;&quot;&quot;</span>
+    <span class="s0">n_images </span><span class="s2">= </span><span class="s0">len</span><span class="s2">(</span><span class="s0">image_paths</span><span class="s2">)</span>
+    <span class="s0">fig</span><span class="s2">, </span><span class="s0">axes </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s0">n_images</span><span class="s2">, </span><span class="s3">2</span><span class="s2">, </span><span class="s0">figsize</span><span class="s2">=(</span><span class="s3">10</span><span class="s2">, </span><span class="s3">5 </span><span class="s2">* </span><span class="s0">n_images</span><span class="s2">))</span>
+
+    <span class="s1">if </span><span class="s0">n_images </span><span class="s2">== </span><span class="s3">1</span><span class="s2">:</span>
+        <span class="s0">axes </span><span class="s2">= [</span><span class="s0">axes</span><span class="s2">]</span>
+
+    <span class="s1">for </span><span class="s0">i</span><span class="s2">, </span><span class="s0">img_path </span><span class="s1">in </span><span class="s0">enumerate</span><span class="s2">(</span><span class="s0">image_paths</span><span class="s2">):</span>
+        <span class="s0">original</span><span class="s2">, </span><span class="s0">processed </span><span class="s2">= </span><span class="s0">process_real_image</span><span class="s2">(</span><span class="s0">model</span><span class="s2">, </span><span class="s0">img_path</span><span class="s2">, </span><span class="s0">device</span><span class="s2">)</span>
+
+        <span class="s5"># Get filename for title</span>
+        <span class="s0">filename </span><span class="s2">= </span><span class="s0">os</span><span class="s2">.</span><span class="s0">path</span><span class="s2">.</span><span class="s0">basename</span><span class="s2">(</span><span class="s0">img_path</span><span class="s2">)</span>
+
+        <span class="s5"># Plot original</span>
+        <span class="s0">axes</span><span class="s2">[</span><span class="s0">i</span><span class="s2">][</span><span class="s3">0</span><span class="s2">].</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">original</span><span class="s2">)</span>
+        <span class="s0">axes</span><span class="s2">[</span><span class="s0">i</span><span class="s2">][</span><span class="s3">0</span><span class="s2">].</span><span class="s0">set_title</span><span class="s2">(</span><span class="s4">f'Original</span><span class="s1">\n{</span><span class="s0">filename</span><span class="s1">}</span><span class="s4">'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">10</span><span class="s2">)</span>
+        <span class="s0">axes</span><span class="s2">[</span><span class="s0">i</span><span class="s2">][</span><span class="s3">0</span><span class="s2">].</span><span class="s0">axis</span><span class="s2">(</span><span class="s4">'off'</span><span class="s2">)</span>
+
+        <span class="s5"># Plot processed</span>
+        <span class="s0">axes</span><span class="s2">[</span><span class="s0">i</span><span class="s2">][</span><span class="s3">1</span><span class="s2">].</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">processed</span><span class="s2">)</span>
+        <span class="s0">axes</span><span class="s2">[</span><span class="s0">i</span><span class="s2">][</span><span class="s3">1</span><span class="s2">].</span><span class="s0">set_title</span><span class="s2">(</span><span class="s4">f'Model Output</span><span class="s1">\n{</span><span class="s0">filename</span><span class="s1">}</span><span class="s4">'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">10</span><span class="s2">)</span>
+        <span class="s0">axes</span><span class="s2">[</span><span class="s0">i</span><span class="s2">][</span><span class="s3">1</span><span class="s2">].</span><span class="s0">axis</span><span class="s2">(</span><span class="s4">'off'</span><span class="s2">)</span>
+
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">suptitle</span><span class="s2">(</span><span class="s4">'Real Image Processing Results'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">14</span><span class="s2">, </span><span class="s0">fontweight</span><span class="s2">=</span><span class="s4">'bold'</span><span class="s2">)</span>
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span>
+
+<span class="s1">def </span><span class="s0">visualize_detail_comparison</span><span class="s2">(</span><span class="s0">model</span><span class="s2">, </span><span class="s0">image_path</span><span class="s2">, </span><span class="s0">crop_regions</span><span class="s2">, </span><span class="s0">device</span><span class="s2">=</span><span class="s4">'cuda'</span><span class="s2">):</span>
+    <span class="s6">&quot;&quot;&quot; 
+    Compare details in specific regions (original vs processed). 
+ 
+    Args: 
+        model: Trained denoising model 
+        image_path: Path to image 
+        crop_regions: List of (x, y, width, height) tuples for regions to zoom into 
+        device: Device to run on 
+    &quot;&quot;&quot;</span>
+    <span class="s0">original</span><span class="s2">, </span><span class="s0">processed </span><span class="s2">= </span><span class="s0">process_real_image</span><span class="s2">(</span><span class="s0">model</span><span class="s2">, </span><span class="s0">image_path</span><span class="s2">, </span><span class="s0">device</span><span class="s2">)</span>
+
+    <span class="s0">n_regions </span><span class="s2">= </span><span class="s0">len</span><span class="s2">(</span><span class="s0">crop_regions</span><span class="s2">)</span>
+    <span class="s0">fig</span><span class="s2">, </span><span class="s0">axes </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s0">n_regions</span><span class="s2">, </span><span class="s3">3</span><span class="s2">, </span><span class="s0">figsize</span><span class="s2">=(</span><span class="s3">15</span><span class="s2">, </span><span class="s3">5 </span><span class="s2">* </span><span class="s0">n_regions</span><span class="s2">))</span>
+
+    <span class="s1">if </span><span class="s0">n_regions </span><span class="s2">== </span><span class="s3">1</span><span class="s2">:</span>
+        <span class="s0">axes </span><span class="s2">= [</span><span class="s0">axes</span><span class="s2">]</span>
+
+    <span class="s1">for </span><span class="s0">i</span><span class="s2">, (</span><span class="s0">x</span><span class="s2">, </span><span class="s0">y</span><span class="s2">, </span><span class="s0">w</span><span class="s2">, </span><span class="s0">h</span><span class="s2">) </span><span class="s1">in </span><span class="s0">enumerate</span><span class="s2">(</span><span class="s0">crop_regions</span><span class="s2">):</span>
+        <span class="s5"># Full image with rectangle</span>
+        <span class="s0">axes</span><span class="s2">[</span><span class="s0">i</span><span class="s2">][</span><span class="s3">0</span><span class="s2">].</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">original</span><span class="s2">)</span>
+        <span class="s0">axes</span><span class="s2">[</span><span class="s0">i</span><span class="s2">][</span><span class="s3">0</span><span class="s2">].</span><span class="s0">add_patch</span><span class="s2">(</span><span class="s0">plt</span><span class="s2">.</span><span class="s0">Rectangle</span><span class="s2">((</span><span class="s0">x</span><span class="s2">, </span><span class="s0">y</span><span class="s2">), </span><span class="s0">w</span><span class="s2">, </span><span class="s0">h</span><span class="s2">,</span>
+                                           <span class="s0">fill</span><span class="s2">=</span><span class="s1">False</span><span class="s2">, </span><span class="s0">edgecolor</span><span class="s2">=</span><span class="s4">'red'</span><span class="s2">, </span><span class="s0">linewidth</span><span class="s2">=</span><span class="s3">2</span><span class="s2">))</span>
+        <span class="s0">axes</span><span class="s2">[</span><span class="s0">i</span><span class="s2">][</span><span class="s3">0</span><span class="s2">].</span><span class="s0">set_title</span><span class="s2">(</span><span class="s4">'Full Image (Region Marked)'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">10</span><span class="s2">)</span>
+        <span class="s0">axes</span><span class="s2">[</span><span class="s0">i</span><span class="s2">][</span><span class="s3">0</span><span class="s2">].</span><span class="s0">axis</span><span class="s2">(</span><span class="s4">'off'</span><span class="s2">)</span>
+
+        <span class="s5"># Cropped original</span>
+        <span class="s0">original_crop </span><span class="s2">= </span><span class="s0">original</span><span class="s2">[</span><span class="s0">y</span><span class="s2">:</span><span class="s0">y</span><span class="s2">+</span><span class="s0">h</span><span class="s2">, </span><span class="s0">x</span><span class="s2">:</span><span class="s0">x</span><span class="s2">+</span><span class="s0">w</span><span class="s2">]</span>
+        <span class="s0">axes</span><span class="s2">[</span><span class="s0">i</span><span class="s2">][</span><span class="s3">1</span><span class="s2">].</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">original_crop</span><span class="s2">)</span>
+        <span class="s0">axes</span><span class="s2">[</span><span class="s0">i</span><span class="s2">][</span><span class="s3">1</span><span class="s2">].</span><span class="s0">set_title</span><span class="s2">(</span><span class="s4">f'Original Detail</span><span class="s1">\n</span><span class="s4">Region </span><span class="s1">{</span><span class="s0">i</span><span class="s2">+</span><span class="s3">1</span><span class="s1">}</span><span class="s4">'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">10</span><span class="s2">)</span>
+        <span class="s0">axes</span><span class="s2">[</span><span class="s0">i</span><span class="s2">][</span><span class="s3">1</span><span class="s2">].</span><span class="s0">axis</span><span class="s2">(</span><span class="s4">'off'</span><span class="s2">)</span>
+
+        <span class="s5"># Cropped processed</span>
+        <span class="s0">processed_crop </span><span class="s2">= </span><span class="s0">processed</span><span class="s2">[</span><span class="s0">y</span><span class="s2">:</span><span class="s0">y</span><span class="s2">+</span><span class="s0">h</span><span class="s2">, </span><span class="s0">x</span><span class="s2">:</span><span class="s0">x</span><span class="s2">+</span><span class="s0">w</span><span class="s2">]</span>
+        <span class="s0">axes</span><span class="s2">[</span><span class="s0">i</span><span class="s2">][</span><span class="s3">2</span><span class="s2">].</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">processed_crop</span><span class="s2">)</span>
+        <span class="s0">axes</span><span class="s2">[</span><span class="s0">i</span><span class="s2">][</span><span class="s3">2</span><span class="s2">].</span><span class="s0">set_title</span><span class="s2">(</span><span class="s4">f'Model Output Detail</span><span class="s1">\n</span><span class="s4">Region </span><span class="s1">{</span><span class="s0">i</span><span class="s2">+</span><span class="s3">1</span><span class="s1">}</span><span class="s4">'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">10</span><span class="s2">)</span>
+        <span class="s0">axes</span><span class="s2">[</span><span class="s0">i</span><span class="s2">][</span><span class="s3">2</span><span class="s2">].</span><span class="s0">axis</span><span class="s2">(</span><span class="s4">'off'</span><span class="s2">)</span>
+
+    <span class="s0">filename </span><span class="s2">= </span><span class="s0">os</span><span class="s2">.</span><span class="s0">path</span><span class="s2">.</span><span class="s0">basename</span><span class="s2">(</span><span class="s0">image_path</span><span class="s2">)</span>
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">suptitle</span><span class="s2">(</span><span class="s4">f'Detail Comparison: </span><span class="s1">{</span><span class="s0">filename</span><span class="s1">}</span><span class="s4">'</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s3">14</span><span class="s2">, </span><span class="s0">fontweight</span><span class="s2">=</span><span class="s4">'bold'</span><span class="s2">)</span>
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s5"># Get sample images from your dataset</span>
+<span class="s0">dataset_path </span><span class="s2">= </span><span class="s4">'./datasets/BSDS500/images'</span>
+<span class="s0">test_images </span><span class="s2">= [</span>
+    <span class="s0">os</span><span class="s2">.</span><span class="s0">path</span><span class="s2">.</span><span class="s0">join</span><span class="s2">(</span><span class="s0">dataset_path</span><span class="s2">, </span><span class="s4">'test'</span><span class="s2">, </span><span class="s4">'3063.jpg'</span><span class="s2">),</span>
+    <span class="s0">os</span><span class="s2">.</span><span class="s0">path</span><span class="s2">.</span><span class="s0">join</span><span class="s2">(</span><span class="s0">dataset_path</span><span class="s2">, </span><span class="s4">'test'</span><span class="s2">, </span><span class="s4">'8068.jpg'</span><span class="s2">),</span>
+    <span class="s0">os</span><span class="s2">.</span><span class="s0">path</span><span class="s2">.</span><span class="s0">join</span><span class="s2">(</span><span class="s0">dataset_path</span><span class="s2">, </span><span class="s4">'test'</span><span class="s2">, </span><span class="s4">'24063.jpg'</span><span class="s2">)</span>
+<span class="s2">]</span>
+
+<span class="s5"># Filter valid paths</span>
+<span class="s0">test_images </span><span class="s2">= [</span><span class="s0">p </span><span class="s1">for </span><span class="s0">p </span><span class="s1">in </span><span class="s0">test_images </span><span class="s1">if </span><span class="s0">os</span><span class="s2">.</span><span class="s0">path</span><span class="s2">.</span><span class="s0">exists</span><span class="s2">(</span><span class="s0">p</span><span class="s2">)]</span>
+
+<span class="s5"># Or automatically get first N images</span>
+<span class="s0">test_dir </span><span class="s2">= </span><span class="s0">os</span><span class="s2">.</span><span class="s0">path</span><span class="s2">.</span><span class="s0">join</span><span class="s2">(</span><span class="s0">dataset_path</span><span class="s2">, </span><span class="s4">'test'</span><span class="s2">)</span>
+<span class="s0">test_images </span><span class="s2">= [</span><span class="s0">os</span><span class="s2">.</span><span class="s0">path</span><span class="s2">.</span><span class="s0">join</span><span class="s2">(</span><span class="s0">test_dir</span><span class="s2">, </span><span class="s0">f</span><span class="s2">) </span><span class="s1">for </span><span class="s0">f </span><span class="s1">in </span><span class="s0">os</span><span class="s2">.</span><span class="s0">listdir</span><span class="s2">(</span><span class="s0">test_dir</span><span class="s2">) </span><span class="s1">if </span><span class="s0">f</span><span class="s2">.</span><span class="s0">endswith</span><span class="s2">((</span><span class="s4">'.jpg'</span><span class="s2">, </span><span class="s4">'.png'</span><span class="s2">))][:</span><span class="s3">3</span><span class="s2">]</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s5"># Visualize multiple real images</span>
+<span class="s0">visualize_real_image_results</span><span class="s2">(</span><span class="s0">model_mul</span><span class="s2">, </span><span class="s0">test_images</span><span class="s2">, </span><span class="s0">device</span><span class="s2">=</span><span class="s0">device</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s5"># Detail comparison - define regions of interest (x, y, width, height)</span>
+<span class="s5"># Example: zoom into busy/textured areas</span>
+<span class="s0">crop_regions </span><span class="s2">= [</span>
+    <span class="s2">(</span><span class="s3">60</span><span class="s2">, </span><span class="s3">80</span><span class="s2">, </span><span class="s3">100</span><span class="s2">, </span><span class="s3">100</span><span class="s2">),   </span><span class="s5"># Busy/high-frequency area</span>
+    <span class="s2">(</span><span class="s3">10</span><span class="s2">, </span><span class="s3">150</span><span class="s2">, </span><span class="s3">100</span><span class="s2">, </span><span class="s3">100</span><span class="s2">),  </span><span class="s5"># Edge-rich area</span>
+    <span class="s2">(</span><span class="s3">50</span><span class="s2">, </span><span class="s3">50</span><span class="s2">, </span><span class="s3">80</span><span class="s2">, </span><span class="s3">80</span><span class="s2">),    </span><span class="s5"># Top-left busy area</span>
+    <span class="s2">(</span><span class="s3">120</span><span class="s2">, </span><span class="s3">100</span><span class="s2">, </span><span class="s3">80</span><span class="s2">, </span><span class="s3">80</span><span class="s2">),  </span><span class="s5"># Center detailed area</span>
+    <span class="s2">(</span><span class="s3">150</span><span class="s2">, </span><span class="s3">150</span><span class="s2">, </span><span class="s3">80</span><span class="s2">, </span><span class="s3">80</span><span class="s2">)   </span><span class="s5"># Bottom-right texture</span>
+<span class="s2">]</span>
+
+<span class="s5"># Visualize detail loss in specific regions</span>
+<span class="s0">visualize_detail_comparison</span><span class="s2">(</span><span class="s0">model_mul</span><span class="s2">, </span><span class="s0">test_images</span><span class="s2">[</span><span class="s3">0</span><span class="s2">], </span><span class="s0">crop_regions</span><span class="s2">, </span><span class="s0">device</span><span class="s2">=</span><span class="s0">device</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+visualize_filter_weights</span><span class="s2">(</span><span class="s0">model_add</span><span class="s2">, </span><span class="s0">np</span><span class="s2">.</span><span class="s0">array</span><span class="s2">(</span><span class="s0">load_and_prepare_image</span><span class="s2">(</span><span class="s0">test_images</span><span class="s2">[</span><span class="s3">0</span><span class="s2">])[</span><span class="s3">0</span><span class="s2">]), </span><span class="s0">device</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+visualize_filter_weights</span><span class="s2">(</span><span class="s0">model_mul</span><span class="s2">, </span><span class="s0">np</span><span class="s2">.</span><span class="s0">array</span><span class="s2">(</span><span class="s0">load_and_prepare_image</span><span class="s2">(</span><span class="s0">test_images</span><span class="s2">[</span><span class="s3">0</span><span class="s2">])[</span><span class="s3">0</span><span class="s2">]), </span><span class="s0">device</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span></pre>
+</body>
+</html>

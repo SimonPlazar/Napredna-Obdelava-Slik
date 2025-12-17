@@ -61,11 +61,11 @@ def reconstruct_rgb_from_ycbcr(y_channel, cb_channel, cr_channel):
     cb_channel = cb_channel.astype(y_channel.dtype)
     cr_channel = cr_channel.astype(y_channel.dtype)
 
-    # Merge channels back to YCbCr
-    ycbcr = cv2.merge([y_channel, cb_channel, cr_channel])
+    # Merge as [Y, Cr, Cb] to match OpenCV's YCrCb format
+    ycrcb = cv2.merge([y_channel, cb_channel, cr_channel])
 
-    # Convert YCbCr to RGB
-    rgb = cv2.cvtColor(ycbcr, cv2.COLOR_YCrCb2BGR)
+    # Convert YCrCb to RGB directly
+    rgb = cv2.cvtColor(ycrcb, cv2.COLOR_YCrCb2RGB)
 
     return rgb
 
