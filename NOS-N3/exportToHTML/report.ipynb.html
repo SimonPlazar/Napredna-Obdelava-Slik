@@ -1,0 +1,469 @@
+<html>
+<head>
+<title>report.ipynb</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #bcbec4;}
+.s1 { color: #cf8e6d;}
+.s2 { color: #bcbec4;}
+.s3 { color: #6aab73;}
+.s4 { color: #7a7e85;}
+.s5 { color: #2aacb8;}
+.s6 { color: #5f826b; font-style: italic;}
+.ls0 { height: 1px; border-width: 0; color: #43454a; background-color:#43454a}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+report.ipynb</font>
+</center></td></tr></table>
+<pre><span class="s0">#%% 
+</span><span class="s1">import </span><span class="s0">os</span>
+<span class="s1">from </span><span class="s0">glob </span><span class="s1">import </span><span class="s0">glob</span>
+
+<span class="s1">import </span><span class="s0">matplotlib</span><span class="s2">.</span><span class="s0">pyplot </span><span class="s1">as </span><span class="s0">plt</span>
+<span class="s1">import </span><span class="s0">torch</span>
+
+<span class="s1">from </span><span class="s0">Generator </span><span class="s1">import </span><span class="s2">*</span><hr class="ls0"><span class="s0">#%% 
+DIV2K_PATH </span><span class="s2">= </span><span class="s3">&quot;./datasets/DIV2K&quot;</span>
+<span class="s0">TRAIN_IMAGES </span><span class="s2">= </span><span class="s0">glob</span><span class="s2">(</span><span class="s0">os</span><span class="s2">.</span><span class="s0">path</span><span class="s2">.</span><span class="s0">join</span><span class="s2">(</span><span class="s0">DIV2K_PATH</span><span class="s2">, </span><span class="s3">&quot;DIV2K_train_HR&quot;</span><span class="s2">, </span><span class="s3">&quot;*.png&quot;</span><span class="s2">))</span>
+<span class="s0">VAL_IMAGES </span><span class="s2">= </span><span class="s0">glob</span><span class="s2">(</span><span class="s0">os</span><span class="s2">.</span><span class="s0">path</span><span class="s2">.</span><span class="s0">join</span><span class="s2">(</span><span class="s0">DIV2K_PATH</span><span class="s2">, </span><span class="s3">&quot;DIV2K_valid_HR&quot;</span><span class="s2">, </span><span class="s3">&quot;*.png&quot;</span><span class="s2">))</span>
+
+<hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># Dataset Analysis</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;=== DIV2K Dataset Analysis ===</span><span class="s1">\n</span><span class="s3">&quot;</span><span class="s2">)</span>
+
+<span class="s4"># Count images</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Training images: </span><span class="s1">{</span><span class="s0">len</span><span class="s2">(</span><span class="s0">TRAIN_IMAGES</span><span class="s2">)</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Validation images: </span><span class="s1">{</span><span class="s0">len</span><span class="s2">(</span><span class="s0">VAL_IMAGES</span><span class="s2">)</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Total images: </span><span class="s1">{</span><span class="s0">len</span><span class="s2">(</span><span class="s0">TRAIN_IMAGES</span><span class="s2">) + </span><span class="s0">len</span><span class="s2">(</span><span class="s0">VAL_IMAGES</span><span class="s2">)</span><span class="s1">}\n</span><span class="s3">&quot;</span><span class="s2">)</span>
+
+<span class="s1">if </span><span class="s0">len</span><span class="s2">(</span><span class="s0">TRAIN_IMAGES</span><span class="s2">) == </span><span class="s5">0</span><span class="s2">:</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;WARNING: No training images found!&quot;</span><span class="s2">)</span>
+<span class="s1">else</span><span class="s2">:</span>
+    <span class="s4"># Analyze image dimensions</span>
+    <span class="s0">train_sizes </span><span class="s2">= []</span>
+    <span class="s1">for </span><span class="s0">img_path </span><span class="s1">in </span><span class="s0">TRAIN_IMAGES</span><span class="s2">[:</span><span class="s5">50</span><span class="s2">]:  </span><span class="s4"># Sample first 50 for speed</span>
+        <span class="s0">img </span><span class="s2">= </span><span class="s0">cv</span><span class="s2">.</span><span class="s0">imread</span><span class="s2">(</span><span class="s0">img_path</span><span class="s2">)</span>
+        <span class="s1">if </span><span class="s0">img </span><span class="s1">is not None</span><span class="s2">:</span>
+            <span class="s0">train_sizes</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">img</span><span class="s2">.</span><span class="s0">shape</span><span class="s2">[:</span><span class="s5">2</span><span class="s2">])  </span><span class="s4"># (height, width)</span>
+
+    <span class="s0">heights</span><span class="s2">, </span><span class="s0">widths </span><span class="s2">= </span><span class="s0">zip</span><span class="s2">(*</span><span class="s0">train_sizes</span><span class="s2">)</span>
+
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Size range:&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;  Height: </span><span class="s1">{</span><span class="s0">min</span><span class="s2">(</span><span class="s0">heights</span><span class="s2">)</span><span class="s1">} </span><span class="s3">- </span><span class="s1">{</span><span class="s0">max</span><span class="s2">(</span><span class="s0">heights</span><span class="s2">)</span><span class="s1">}</span><span class="s3">px&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;  Width: </span><span class="s1">{</span><span class="s0">min</span><span class="s2">(</span><span class="s0">widths</span><span class="s2">)</span><span class="s1">} </span><span class="s3">- </span><span class="s1">{</span><span class="s0">max</span><span class="s2">(</span><span class="s0">widths</span><span class="s2">)</span><span class="s1">}</span><span class="s3">px</span><span class="s1">\n</span><span class="s3">&quot;</span><span class="s2">)</span>
+
+<span class="s4"># Display sample images</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;Sample images:&quot;</span><span class="s2">)</span>
+<span class="s0">fig</span><span class="s2">, </span><span class="s0">axes </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s5">2</span><span class="s2">, </span><span class="s5">3</span><span class="s2">, </span><span class="s0">figsize</span><span class="s2">=(</span><span class="s5">15</span><span class="s2">, </span><span class="s5">10</span><span class="s2">))</span>
+
+<span class="s1">for </span><span class="s0">i</span><span class="s2">, </span><span class="s0">ax </span><span class="s1">in </span><span class="s0">enumerate</span><span class="s2">(</span><span class="s0">axes</span><span class="s2">.</span><span class="s0">flat</span><span class="s2">):</span>
+    <span class="s1">if </span><span class="s0">i </span><span class="s2">&lt; </span><span class="s0">len</span><span class="s2">(</span><span class="s0">TRAIN_IMAGES</span><span class="s2">):</span>
+        <span class="s0">img </span><span class="s2">= </span><span class="s0">cv</span><span class="s2">.</span><span class="s0">imread</span><span class="s2">(</span><span class="s0">TRAIN_IMAGES</span><span class="s2">[</span><span class="s0">i</span><span class="s2">])</span>
+        <span class="s1">if </span><span class="s0">img </span><span class="s1">is not None</span><span class="s2">:</span>
+            <span class="s0">img_rgb </span><span class="s2">= </span><span class="s0">cv</span><span class="s2">.</span><span class="s0">cvtColor</span><span class="s2">(</span><span class="s0">img</span><span class="s2">, </span><span class="s0">cv</span><span class="s2">.</span><span class="s0">COLOR_BGR2RGB</span><span class="s2">)</span>
+            <span class="s0">ax</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">img_rgb</span><span class="s2">)</span>
+            <span class="s0">ax</span><span class="s2">.</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">f&quot;</span><span class="s1">{</span><span class="s0">os</span><span class="s2">.</span><span class="s0">path</span><span class="s2">.</span><span class="s0">basename</span><span class="s2">(</span><span class="s0">TRAIN_IMAGES</span><span class="s2">[</span><span class="s0">i</span><span class="s2">])</span><span class="s1">}\n{</span><span class="s0">img</span><span class="s2">.</span><span class="s0">shape</span><span class="s2">[</span><span class="s5">1</span><span class="s2">]</span><span class="s1">}</span><span class="s3">x</span><span class="s1">{</span><span class="s0">img</span><span class="s2">.</span><span class="s0">shape</span><span class="s2">[</span><span class="s5">0</span><span class="s2">]</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+            <span class="s0">ax</span><span class="s2">.</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">'off'</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span><hr class="ls0"><span class="s0">#%% 
+print</span><span class="s2">(</span><span class="s3">&quot;Random text generation:&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s0">string</span><span class="s2">.</span><span class="s0">ascii_letters </span><span class="s2">+ </span><span class="s3">&quot; &quot; </span><span class="s2">+ </span><span class="s0">string</span><span class="s2">.</span><span class="s0">digits</span><span class="s2">)</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;Random text: &quot;</span><span class="s2">, </span><span class="s0">random_text</span><span class="s2">(</span><span class="s0">min_len</span><span class="s2">=</span><span class="s5">10</span><span class="s2">, </span><span class="s0">max_len</span><span class="s2">=</span><span class="s5">50</span><span class="s2">))</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># TEST 1: Naložimo ozadje in teksturo</span>
+
+<span class="s0">bg_path </span><span class="s2">= </span><span class="s0">random</span><span class="s2">.</span><span class="s0">choice</span><span class="s2">(</span><span class="s0">TRAIN_IMAGES</span><span class="s2">)</span>
+<span class="s0">tx_path </span><span class="s2">= </span><span class="s0">random</span><span class="s2">.</span><span class="s0">choice</span><span class="s2">(</span><span class="s0">TRAIN_IMAGES</span><span class="s2">)</span>
+
+<span class="s0">bg </span><span class="s2">= </span><span class="s0">cv</span><span class="s2">.</span><span class="s0">imread</span><span class="s2">(</span><span class="s0">bg_path</span><span class="s2">)</span>
+<span class="s0">tx </span><span class="s2">= </span><span class="s0">cv</span><span class="s2">.</span><span class="s0">imread</span><span class="s2">(</span><span class="s0">tx_path</span><span class="s2">)</span>
+
+<span class="s0">bg </span><span class="s2">= </span><span class="s0">random_crop</span><span class="s2">(</span><span class="s0">bg</span><span class="s2">, </span><span class="s0">GEN_SIZE</span><span class="s2">)</span>
+<span class="s0">tx </span><span class="s2">= </span><span class="s0">random_crop</span><span class="s2">(</span><span class="s0">tx</span><span class="s2">, </span><span class="s0">GEN_SIZE</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">figure</span><span class="s2">(</span><span class="s0">figsize</span><span class="s2">=(</span><span class="s5">10</span><span class="s2">, </span><span class="s5">4</span><span class="s2">))</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">subplot</span><span class="s2">(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">2</span><span class="s2">, </span><span class="s5">1</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">title</span><span class="s2">(</span><span class="s3">&quot;Ozadje (BG)&quot;</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">cv</span><span class="s2">.</span><span class="s0">cvtColor</span><span class="s2">(</span><span class="s0">bg</span><span class="s2">, </span><span class="s0">cv</span><span class="s2">.</span><span class="s0">COLOR_BGR2RGB</span><span class="s2">))</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">&quot;off&quot;</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">subplot</span><span class="s2">(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">2</span><span class="s2">, </span><span class="s5">2</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">title</span><span class="s2">(</span><span class="s3">&quot;Tekstura besedila (TX)&quot;</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">cv</span><span class="s2">.</span><span class="s0">cvtColor</span><span class="s2">(</span><span class="s0">tx</span><span class="s2">, </span><span class="s0">cv</span><span class="s2">.</span><span class="s0">COLOR_BGR2RGB</span><span class="s2">))</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">&quot;off&quot;</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># TEST 2: Generiranje maske besedila</span>
+
+<span class="s0">mask </span><span class="s2">= </span><span class="s0">generate_text_mask</span><span class="s2">(</span><span class="s0">GEN_SIZE</span><span class="s2">, </span><span class="s0">min_len</span><span class="s2">=</span><span class="s5">50</span><span class="s2">, </span><span class="s0">max_len</span><span class="s2">=</span><span class="s5">100</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">figure</span><span class="s2">(</span><span class="s0">figsize</span><span class="s2">=(</span><span class="s5">4</span><span class="s2">, </span><span class="s5">4</span><span class="s2">))</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">title</span><span class="s2">(</span><span class="s3">&quot;Maska besedila (anti-alias)&quot;</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">mask</span><span class="s2">[:, :, </span><span class="s5">0</span><span class="s2">], </span><span class="s0">cmap</span><span class="s2">=</span><span class="s3">&quot;gray&quot;</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">&quot;off&quot;</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;Maska:&quot;</span><span class="s2">, </span><span class="s0">mask</span><span class="s2">.</span><span class="s0">shape</span><span class="s2">)</span>
+<hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># TEST 3: Augmentacija maske, bg in teksture</span>
+
+<span class="s0">angle </span><span class="s2">= </span><span class="s0">random</span><span class="s2">.</span><span class="s0">uniform</span><span class="s2">(-</span><span class="s5">15</span><span class="s2">, </span><span class="s5">15</span><span class="s2">)</span>
+<span class="s0">scale </span><span class="s2">= </span><span class="s0">random</span><span class="s2">.</span><span class="s0">uniform</span><span class="s2">(</span><span class="s5">0.9</span><span class="s2">, </span><span class="s5">1.1</span><span class="s2">)</span>
+<span class="s0">flip </span><span class="s2">= </span><span class="s1">True</span>
+
+<span class="s0">mask_aug </span><span class="s2">= </span><span class="s0">augment_affine</span><span class="s2">(</span><span class="s0">mask</span><span class="s2">, </span><span class="s0">angle</span><span class="s2">, </span><span class="s0">scale</span><span class="s2">, </span><span class="s0">flip</span><span class="s2">)</span>
+<span class="s0">bg_aug </span><span class="s2">= </span><span class="s0">augment_affine</span><span class="s2">(</span><span class="s0">bg</span><span class="s2">.</span><span class="s0">astype</span><span class="s2">(</span><span class="s0">np</span><span class="s2">.</span><span class="s0">float32</span><span class="s2">), </span><span class="s0">angle</span><span class="s2">, </span><span class="s0">scale</span><span class="s2">, </span><span class="s0">flip</span><span class="s2">)</span>
+<span class="s0">tx_aug </span><span class="s2">= </span><span class="s0">augment_affine</span><span class="s2">(</span><span class="s0">tx</span><span class="s2">.</span><span class="s0">astype</span><span class="s2">(</span><span class="s0">np</span><span class="s2">.</span><span class="s0">float32</span><span class="s2">), </span><span class="s0">angle</span><span class="s2">, </span><span class="s0">scale</span><span class="s2">, </span><span class="s0">flip</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">figure</span><span class="s2">(</span><span class="s0">figsize</span><span class="s2">=(</span><span class="s5">12</span><span class="s2">, </span><span class="s5">4</span><span class="s2">))</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">subplot</span><span class="s2">(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">3</span><span class="s2">, </span><span class="s5">1</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">title</span><span class="s2">(</span><span class="s3">&quot;Maska (aug)&quot;</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">mask_aug</span><span class="s2">[:, :, </span><span class="s5">0</span><span class="s2">], </span><span class="s0">cmap</span><span class="s2">=</span><span class="s3">&quot;gray&quot;</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">&quot;off&quot;</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">subplot</span><span class="s2">(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">3</span><span class="s2">, </span><span class="s5">2</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">title</span><span class="s2">(</span><span class="s3">&quot;BG (aug)&quot;</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">cv</span><span class="s2">.</span><span class="s0">cvtColor</span><span class="s2">(</span><span class="s0">bg_aug</span><span class="s2">.</span><span class="s0">astype</span><span class="s2">(</span><span class="s0">np</span><span class="s2">.</span><span class="s0">uint8</span><span class="s2">), </span><span class="s0">cv</span><span class="s2">.</span><span class="s0">COLOR_BGR2RGB</span><span class="s2">))</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">&quot;off&quot;</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">subplot</span><span class="s2">(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">3</span><span class="s2">, </span><span class="s5">3</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">title</span><span class="s2">(</span><span class="s3">&quot;TX (aug)&quot;</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">cv</span><span class="s2">.</span><span class="s0">cvtColor</span><span class="s2">(</span><span class="s0">tx_aug</span><span class="s2">.</span><span class="s0">astype</span><span class="s2">(</span><span class="s0">np</span><span class="s2">.</span><span class="s0">uint8</span><span class="s2">), </span><span class="s0">cv</span><span class="s2">.</span><span class="s0">COLOR_BGR2RGB</span><span class="s2">))</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">&quot;off&quot;</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span>
+<hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># TEST 4: Aplikacija maske s teksturo na ozadje</span>
+
+<span class="s0">composed </span><span class="s2">= </span><span class="s0">apply_text_texture</span><span class="s2">(</span><span class="s0">bg_aug</span><span class="s2">, </span><span class="s0">tx_aug</span><span class="s2">, </span><span class="s0">mask_aug</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">figure</span><span class="s2">(</span><span class="s0">figsize</span><span class="s2">=(</span><span class="s5">5</span><span class="s2">, </span><span class="s5">5</span><span class="s2">))</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">title</span><span class="s2">(</span><span class="s3">&quot;Rezultat: (1-M)*BG + M*TX&quot;</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">cv</span><span class="s2">.</span><span class="s0">cvtColor</span><span class="s2">(</span><span class="s0">composed</span><span class="s2">.</span><span class="s0">astype</span><span class="s2">(</span><span class="s0">np</span><span class="s2">.</span><span class="s0">uint8</span><span class="s2">), </span><span class="s0">cv</span><span class="s2">.</span><span class="s0">COLOR_BGR2RGB</span><span class="s2">))</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">&quot;off&quot;</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span>
+<hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># TEST 5: Končni center crop na 256x256</span>
+
+<span class="s0">start </span><span class="s2">= (</span><span class="s0">GEN_SIZE </span><span class="s2">- </span><span class="s0">IMAGE_SIZE</span><span class="s2">) // </span><span class="s5">2</span>
+<span class="s0">end </span><span class="s2">= </span><span class="s0">start </span><span class="s2">+ </span><span class="s0">IMAGE_SIZE</span>
+
+<span class="s0">final_img </span><span class="s2">= </span><span class="s0">composed</span><span class="s2">[</span><span class="s0">start</span><span class="s2">:</span><span class="s0">end</span><span class="s2">, </span><span class="s0">start</span><span class="s2">:</span><span class="s0">end</span><span class="s2">] / </span><span class="s5">255.0</span>
+<span class="s0">final_mask </span><span class="s2">= </span><span class="s0">mask_aug</span><span class="s2">[</span><span class="s0">start</span><span class="s2">:</span><span class="s0">end</span><span class="s2">, </span><span class="s0">start</span><span class="s2">:</span><span class="s0">end</span><span class="s2">]</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">figure</span><span class="s2">(</span><span class="s0">figsize</span><span class="s2">=(</span><span class="s5">10</span><span class="s2">, </span><span class="s5">4</span><span class="s2">))</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">subplot</span><span class="s2">(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">2</span><span class="s2">, </span><span class="s5">1</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">title</span><span class="s2">(</span><span class="s3">&quot;Končna vhodna slika (256x256)&quot;</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">final_img</span><span class="s2">[..., ::-</span><span class="s5">1</span><span class="s2">])</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">&quot;off&quot;</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">subplot</span><span class="s2">(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">2</span><span class="s2">, </span><span class="s5">2</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">title</span><span class="s2">(</span><span class="s3">&quot;Končna maska (GT)&quot;</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">final_mask</span><span class="s2">[:, :, </span><span class="s5">0</span><span class="s2">], </span><span class="s0">cmap</span><span class="s2">=</span><span class="s3">&quot;gray&quot;</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">&quot;off&quot;</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;Image:&quot;</span><span class="s2">, </span><span class="s0">final_img</span><span class="s2">.</span><span class="s0">shape</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;Mask :&quot;</span><span class="s2">, </span><span class="s0">final_mask</span><span class="s2">.</span><span class="s0">shape</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># TEST 6: generate_sample – vse v enem</span>
+
+<span class="s0">img</span><span class="s2">, </span><span class="s0">msk </span><span class="s2">= </span><span class="s0">generate_sample</span><span class="s2">(</span><span class="s0">bg_path</span><span class="s2">, </span><span class="s0">tx_path</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">figure</span><span class="s2">(</span><span class="s0">figsize</span><span class="s2">=(</span><span class="s5">12</span><span class="s2">, </span><span class="s5">4</span><span class="s2">))</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">subplot</span><span class="s2">(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">3</span><span class="s2">, </span><span class="s5">1</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">title</span><span class="s2">(</span><span class="s3">&quot;Vhodna slika&quot;</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">img</span><span class="s2">[..., ::-</span><span class="s5">1</span><span class="s2">])</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">&quot;off&quot;</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">subplot</span><span class="s2">(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">3</span><span class="s2">, </span><span class="s5">2</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">title</span><span class="s2">(</span><span class="s3">&quot;Maska (GT)&quot;</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">msk</span><span class="s2">[:, :, </span><span class="s5">0</span><span class="s2">], </span><span class="s0">cmap</span><span class="s2">=</span><span class="s3">&quot;gray&quot;</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">&quot;off&quot;</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">subplot</span><span class="s2">(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">3</span><span class="s2">, </span><span class="s5">3</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">title</span><span class="s2">(</span><span class="s3">&quot;Overlay (kontrola)&quot;</span><span class="s2">)</span>
+<span class="s0">overlay </span><span class="s2">= </span><span class="s0">img</span><span class="s2">.</span><span class="s0">copy</span><span class="s2">()</span>
+<span class="s0">overlay</span><span class="s2">[</span><span class="s0">msk</span><span class="s2">[:, :, </span><span class="s5">0</span><span class="s2">] &gt; </span><span class="s5">0.5</span><span class="s2">] = [</span><span class="s5">1</span><span class="s2">, </span><span class="s5">0</span><span class="s2">, </span><span class="s5">0</span><span class="s2">]</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">overlay</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">&quot;off&quot;</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span>
+<hr class="ls0"><span class="s0">#%% 
+DATASET_PATH_TRAIN </span><span class="s2">= </span><span class="s3">&quot;datasets/DIV2K/DIV2K_train_HR&quot;</span>
+<span class="s0">DATASET_PATH_TEST </span><span class="s2">= </span><span class="s3">&quot;datasets/DIV2K/DIV2K_valid_HR&quot;</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s1">from </span><span class="s0">Model </span><span class="s1">import </span><span class="s0">TextSegmentationDataset</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># Cell 1: Test on_the_fly mode (fixed pairs, random augmentations)</span>
+<span class="s0">dataset_fly </span><span class="s2">= </span><span class="s0">TextSegmentationDataset</span><span class="s2">(</span>
+    <span class="s0">image_dir</span><span class="s2">=</span><span class="s0">DATASET_PATH_TRAIN</span><span class="s2">,</span>
+    <span class="s0">checkpoint_dir</span><span class="s2">=</span><span class="s3">'checkpoints/dataset_fly'</span><span class="s2">,</span>
+    <span class="s0">length</span><span class="s2">=</span><span class="s5">100</span><span class="s2">,</span>
+    <span class="s0">mode</span><span class="s2">=</span><span class="s3">'on_the_fly'</span>
+<span class="s2">)</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Dataset length: </span><span class="s1">{</span><span class="s0">len</span><span class="s2">(</span><span class="s0">dataset_fly</span><span class="s2">)</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;</span><span class="s1">\n</span><span class="s3">Testing same index twice (should show different augmentations):&quot;</span><span class="s2">)</span>
+
+<span class="s4"># Get two different augmented versions</span>
+<span class="s0">imgs </span><span class="s2">= []</span>
+<span class="s0">masks </span><span class="s2">= []</span>
+<span class="s1">for </span><span class="s0">i </span><span class="s1">in </span><span class="s0">range</span><span class="s2">(</span><span class="s5">2</span><span class="s2">):</span>
+    <span class="s0">img</span><span class="s2">, </span><span class="s0">mask </span><span class="s2">= </span><span class="s0">dataset_fly</span><span class="s2">[</span><span class="s5">0</span><span class="s2">]</span>
+    <span class="s0">imgs</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">img</span><span class="s2">)</span>
+    <span class="s0">masks</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">mask</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;</span><span class="s1">\n</span><span class="s3">Call </span><span class="s1">{</span><span class="s0">i </span><span class="s2">+ </span><span class="s5">1</span><span class="s1">}</span><span class="s3">:&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;  Image: </span><span class="s1">{</span><span class="s0">img</span><span class="s2">.</span><span class="s0">shape</span><span class="s1">} </span><span class="s3">[</span><span class="s1">{</span><span class="s0">img</span><span class="s2">.</span><span class="s0">min</span><span class="s2">()</span><span class="s1">:</span><span class="s3">.3f</span><span class="s1">}</span><span class="s3">, </span><span class="s1">{</span><span class="s0">img</span><span class="s2">.</span><span class="s0">max</span><span class="s2">()</span><span class="s1">:</span><span class="s3">.3f</span><span class="s1">}</span><span class="s3">]&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;  Mask:  </span><span class="s1">{</span><span class="s0">mask</span><span class="s2">.</span><span class="s0">shape</span><span class="s1">} </span><span class="s3">[</span><span class="s1">{</span><span class="s0">mask</span><span class="s2">.</span><span class="s0">min</span><span class="s2">()</span><span class="s1">:</span><span class="s3">.3f</span><span class="s1">}</span><span class="s3">, </span><span class="s1">{</span><span class="s0">mask</span><span class="s2">.</span><span class="s0">max</span><span class="s2">()</span><span class="s1">:</span><span class="s3">.3f</span><span class="s1">}</span><span class="s3">]&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;  Mask sum: </span><span class="s1">{</span><span class="s0">mask</span><span class="s2">.</span><span class="s0">sum</span><span class="s2">().</span><span class="s0">item</span><span class="s2">()</span><span class="s1">:</span><span class="s3">.0f</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+
+<span class="s4"># Visualize both versions side-by-side</span>
+<span class="s0">fig</span><span class="s2">, </span><span class="s0">axes </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s5">2</span><span class="s2">, </span><span class="s5">2</span><span class="s2">, </span><span class="s0">figsize</span><span class="s2">=(</span><span class="s5">10</span><span class="s2">, </span><span class="s5">10</span><span class="s2">))</span>
+
+<span class="s0">axes</span><span class="s2">[</span><span class="s5">0</span><span class="s2">, </span><span class="s5">0</span><span class="s2">].</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">imgs</span><span class="s2">[</span><span class="s5">0</span><span class="s2">].</span><span class="s0">permute</span><span class="s2">(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">2</span><span class="s2">, </span><span class="s5">0</span><span class="s2">))</span>
+<span class="s0">axes</span><span class="s2">[</span><span class="s5">0</span><span class="s2">, </span><span class="s5">0</span><span class="s2">].</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">&quot;Image - Version 1&quot;</span><span class="s2">)</span>
+<span class="s0">axes</span><span class="s2">[</span><span class="s5">0</span><span class="s2">, </span><span class="s5">0</span><span class="s2">].</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">'off'</span><span class="s2">)</span>
+
+<span class="s0">axes</span><span class="s2">[</span><span class="s5">0</span><span class="s2">, </span><span class="s5">1</span><span class="s2">].</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">imgs</span><span class="s2">[</span><span class="s5">1</span><span class="s2">].</span><span class="s0">permute</span><span class="s2">(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">2</span><span class="s2">, </span><span class="s5">0</span><span class="s2">))</span>
+<span class="s0">axes</span><span class="s2">[</span><span class="s5">0</span><span class="s2">, </span><span class="s5">1</span><span class="s2">].</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">&quot;Image - Version 2&quot;</span><span class="s2">)</span>
+<span class="s0">axes</span><span class="s2">[</span><span class="s5">0</span><span class="s2">, </span><span class="s5">1</span><span class="s2">].</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">'off'</span><span class="s2">)</span>
+
+<span class="s0">axes</span><span class="s2">[</span><span class="s5">1</span><span class="s2">, </span><span class="s5">0</span><span class="s2">].</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">masks</span><span class="s2">[</span><span class="s5">0</span><span class="s2">][</span><span class="s5">0</span><span class="s2">], </span><span class="s0">cmap</span><span class="s2">=</span><span class="s3">'gray'</span><span class="s2">)</span>
+<span class="s0">axes</span><span class="s2">[</span><span class="s5">1</span><span class="s2">, </span><span class="s5">0</span><span class="s2">].</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">&quot;Mask - Version 1&quot;</span><span class="s2">)</span>
+<span class="s0">axes</span><span class="s2">[</span><span class="s5">1</span><span class="s2">, </span><span class="s5">0</span><span class="s2">].</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">'off'</span><span class="s2">)</span>
+
+<span class="s0">axes</span><span class="s2">[</span><span class="s5">1</span><span class="s2">, </span><span class="s5">1</span><span class="s2">].</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">masks</span><span class="s2">[</span><span class="s5">1</span><span class="s2">][</span><span class="s5">0</span><span class="s2">], </span><span class="s0">cmap</span><span class="s2">=</span><span class="s3">'gray'</span><span class="s2">)</span>
+<span class="s0">axes</span><span class="s2">[</span><span class="s5">1</span><span class="s2">, </span><span class="s5">1</span><span class="s2">].</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">&quot;Mask - Version 2&quot;</span><span class="s2">)</span>
+<span class="s0">axes</span><span class="s2">[</span><span class="s5">1</span><span class="s2">, </span><span class="s5">1</span><span class="s2">].</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">'off'</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">suptitle</span><span class="s2">(</span><span class="s3">&quot;Same index [0], different random augmentations&quot;</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s5">14</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># Cell 2: Test random mode (fully random pairs and augmentations)</span>
+<span class="s0">dataset_random </span><span class="s2">= </span><span class="s0">TextSegmentationDataset</span><span class="s2">(</span>
+    <span class="s0">image_dir</span><span class="s2">=</span><span class="s0">DATASET_PATH_TRAIN</span><span class="s2">,</span>
+    <span class="s0">checkpoint_dir</span><span class="s2">=</span><span class="s3">'checkpoints/dataset_random'</span><span class="s2">,</span>
+    <span class="s0">length</span><span class="s2">=</span><span class="s5">100</span><span class="s2">,</span>
+    <span class="s0">mode</span><span class="s2">=</span><span class="s3">'random'</span>
+<span class="s2">)</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Dataset length: </span><span class="s1">{</span><span class="s0">len</span><span class="s2">(</span><span class="s0">dataset_random</span><span class="s2">)</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;</span><span class="s1">\n</span><span class="s3">Testing same index twice (should show completely different samples):&quot;</span><span class="s2">)</span>
+
+<span class="s1">for </span><span class="s0">i </span><span class="s1">in </span><span class="s0">range</span><span class="s2">(</span><span class="s5">2</span><span class="s2">):</span>
+    <span class="s0">img</span><span class="s2">, </span><span class="s0">mask </span><span class="s2">= </span><span class="s0">dataset_random</span><span class="s2">[</span><span class="s5">0</span><span class="s2">]</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;</span><span class="s1">\n</span><span class="s3">Call </span><span class="s1">{</span><span class="s0">i </span><span class="s2">+ </span><span class="s5">1</span><span class="s1">}</span><span class="s3">:&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;  Image: </span><span class="s1">{</span><span class="s0">img</span><span class="s2">.</span><span class="s0">shape</span><span class="s1">} </span><span class="s3">[</span><span class="s1">{</span><span class="s0">img</span><span class="s2">.</span><span class="s0">min</span><span class="s2">()</span><span class="s1">:</span><span class="s3">.3f</span><span class="s1">}</span><span class="s3">, </span><span class="s1">{</span><span class="s0">img</span><span class="s2">.</span><span class="s0">max</span><span class="s2">()</span><span class="s1">:</span><span class="s3">.3f</span><span class="s1">}</span><span class="s3">]&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;  Mask:  </span><span class="s1">{</span><span class="s0">mask</span><span class="s2">.</span><span class="s0">shape</span><span class="s1">} </span><span class="s3">[</span><span class="s1">{</span><span class="s0">mask</span><span class="s2">.</span><span class="s0">min</span><span class="s2">()</span><span class="s1">:</span><span class="s3">.3f</span><span class="s1">}</span><span class="s3">, </span><span class="s1">{</span><span class="s0">mask</span><span class="s2">.</span><span class="s0">max</span><span class="s2">()</span><span class="s1">:</span><span class="s3">.3f</span><span class="s1">}</span><span class="s3">]&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;  Mask sum: </span><span class="s1">{</span><span class="s0">mask</span><span class="s2">.</span><span class="s0">sum</span><span class="s2">().</span><span class="s0">item</span><span class="s2">()</span><span class="s1">:</span><span class="s3">.0f</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+
+<span class="s4"># Visualize multiple samples</span>
+<span class="s0">fig</span><span class="s2">, </span><span class="s0">axes </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s5">2</span><span class="s2">, </span><span class="s5">4</span><span class="s2">, </span><span class="s0">figsize</span><span class="s2">=(</span><span class="s5">16</span><span class="s2">, </span><span class="s5">8</span><span class="s2">))</span>
+<span class="s1">for </span><span class="s0">i </span><span class="s1">in </span><span class="s0">range</span><span class="s2">(</span><span class="s5">4</span><span class="s2">):</span>
+    <span class="s0">img</span><span class="s2">, </span><span class="s0">mask </span><span class="s2">= </span><span class="s0">dataset_random</span><span class="s2">[</span><span class="s5">0</span><span class="s2">]</span>
+    <span class="s0">axes</span><span class="s2">[</span><span class="s5">0</span><span class="s2">, </span><span class="s0">i</span><span class="s2">].</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">img</span><span class="s2">.</span><span class="s0">permute</span><span class="s2">(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">2</span><span class="s2">, </span><span class="s5">0</span><span class="s2">))</span>
+    <span class="s0">axes</span><span class="s2">[</span><span class="s5">0</span><span class="s2">, </span><span class="s0">i</span><span class="s2">].</span><span class="s0">set_title</span><span class="s2">(</span><span class="s3">f&quot;Sample </span><span class="s1">{</span><span class="s0">i </span><span class="s2">+ </span><span class="s5">1</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+    <span class="s0">axes</span><span class="s2">[</span><span class="s5">0</span><span class="s2">, </span><span class="s0">i</span><span class="s2">].</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">'off'</span><span class="s2">)</span>
+    <span class="s0">axes</span><span class="s2">[</span><span class="s5">1</span><span class="s2">, </span><span class="s0">i</span><span class="s2">].</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">mask</span><span class="s2">[</span><span class="s5">0</span><span class="s2">], </span><span class="s0">cmap</span><span class="s2">=</span><span class="s3">'gray'</span><span class="s2">)</span>
+    <span class="s0">axes</span><span class="s2">[</span><span class="s5">1</span><span class="s2">, </span><span class="s0">i</span><span class="s2">].</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">'off'</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">suptitle</span><span class="s2">(</span><span class="s3">&quot;Random mode: Same index, different results&quot;</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># Cell 3: Test pregenerated mode (fixed samples)</span>
+<span class="s0">dataset_pre </span><span class="s2">= </span><span class="s0">TextSegmentationDataset</span><span class="s2">(</span>
+    <span class="s0">image_dir</span><span class="s2">=</span><span class="s0">DATASET_PATH_TRAIN</span><span class="s2">,</span>
+    <span class="s0">checkpoint_dir</span><span class="s2">=</span><span class="s3">'checkpoints/dataset_pre'</span><span class="s2">,</span>
+    <span class="s0">length</span><span class="s2">=</span><span class="s5">100</span><span class="s2">,</span>
+    <span class="s0">mode</span><span class="s2">=</span><span class="s3">'pregenerated'</span>
+<span class="s2">)</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Dataset length: </span><span class="s1">{</span><span class="s0">len</span><span class="s2">(</span><span class="s0">dataset_pre</span><span class="s2">)</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;</span><span class="s1">\n</span><span class="s3">Testing same index twice (should be IDENTICAL):&quot;</span><span class="s2">)</span>
+
+<span class="s1">for </span><span class="s0">i </span><span class="s1">in </span><span class="s0">range</span><span class="s2">(</span><span class="s5">2</span><span class="s2">):</span>
+    <span class="s0">img</span><span class="s2">, </span><span class="s0">mask </span><span class="s2">= </span><span class="s0">dataset_pre</span><span class="s2">[</span><span class="s5">0</span><span class="s2">]</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;</span><span class="s1">\n</span><span class="s3">Call </span><span class="s1">{</span><span class="s0">i </span><span class="s2">+ </span><span class="s5">1</span><span class="s1">}</span><span class="s3">:&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;  Image: </span><span class="s1">{</span><span class="s0">img</span><span class="s2">.</span><span class="s0">shape</span><span class="s1">} </span><span class="s3">[</span><span class="s1">{</span><span class="s0">img</span><span class="s2">.</span><span class="s0">min</span><span class="s2">()</span><span class="s1">:</span><span class="s3">.3f</span><span class="s1">}</span><span class="s3">, </span><span class="s1">{</span><span class="s0">img</span><span class="s2">.</span><span class="s0">max</span><span class="s2">()</span><span class="s1">:</span><span class="s3">.3f</span><span class="s1">}</span><span class="s3">]&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;  Mask:  </span><span class="s1">{</span><span class="s0">mask</span><span class="s2">.</span><span class="s0">shape</span><span class="s1">} </span><span class="s3">[</span><span class="s1">{</span><span class="s0">mask</span><span class="s2">.</span><span class="s0">min</span><span class="s2">()</span><span class="s1">:</span><span class="s3">.3f</span><span class="s1">}</span><span class="s3">, </span><span class="s1">{</span><span class="s0">mask</span><span class="s2">.</span><span class="s0">max</span><span class="s2">()</span><span class="s1">:</span><span class="s3">.3f</span><span class="s1">}</span><span class="s3">]&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;  Mask sum: </span><span class="s1">{</span><span class="s0">mask</span><span class="s2">.</span><span class="s0">sum</span><span class="s2">().</span><span class="s0">item</span><span class="s2">()</span><span class="s1">:</span><span class="s3">.0f</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+
+<span class="s4"># Verify reproducibility</span>
+<span class="s0">img1</span><span class="s2">, </span><span class="s0">mask1 </span><span class="s2">= </span><span class="s0">dataset_pre</span><span class="s2">[</span><span class="s5">0</span><span class="s2">]</span>
+<span class="s0">img2</span><span class="s2">, </span><span class="s0">mask2 </span><span class="s2">= </span><span class="s0">dataset_pre</span><span class="s2">[</span><span class="s5">0</span><span class="s2">]</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;</span><span class="s1">\n</span><span class="s3">Images identical: </span><span class="s1">{</span><span class="s0">torch</span><span class="s2">.</span><span class="s0">equal</span><span class="s2">(</span><span class="s0">img1</span><span class="s2">, </span><span class="s0">img2</span><span class="s2">)</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Masks identical: </span><span class="s1">{</span><span class="s0">torch</span><span class="s2">.</span><span class="s0">equal</span><span class="s2">(</span><span class="s0">mask1</span><span class="s2">, </span><span class="s0">mask2</span><span class="s2">)</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+
+<span class="s4"># Visualize</span>
+<span class="s0">img</span><span class="s2">, </span><span class="s0">mask </span><span class="s2">= </span><span class="s0">dataset_pre</span><span class="s2">[</span><span class="s5">0</span><span class="s2">]</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">figure</span><span class="s2">(</span><span class="s0">figsize</span><span class="s2">=(</span><span class="s5">10</span><span class="s2">, </span><span class="s5">4</span><span class="s2">))</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">subplot</span><span class="s2">(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">2</span><span class="s2">, </span><span class="s5">1</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">title</span><span class="s2">(</span><span class="s3">&quot;Image (pregenerated)&quot;</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">img</span><span class="s2">.</span><span class="s0">permute</span><span class="s2">(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">2</span><span class="s2">, </span><span class="s5">0</span><span class="s2">))</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">'off'</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">subplot</span><span class="s2">(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">2</span><span class="s2">, </span><span class="s5">2</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">title</span><span class="s2">(</span><span class="s3">&quot;Mask&quot;</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">mask</span><span class="s2">[</span><span class="s5">0</span><span class="s2">], </span><span class="s0">cmap</span><span class="s2">=</span><span class="s3">'gray'</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">'off'</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s1">import </span><span class="s0">torchinfo</span>
+<span class="s1">from </span><span class="s0">Model </span><span class="s1">import </span><span class="s0">UNetTextSegmentation</span>
+
+<span class="s0">batch_size </span><span class="s2">= </span><span class="s5">16</span>
+
+<span class="s0">model </span><span class="s2">= </span><span class="s0">UNetTextSegmentation</span><span class="s2">()</span>
+<span class="s0">torchinfo</span><span class="s2">.</span><span class="s0">summary</span><span class="s2">(</span><span class="s0">model</span><span class="s2">, (</span><span class="s0">batch_size</span><span class="s2">, </span><span class="s5">3</span><span class="s2">, </span><span class="s0">IMAGE_SIZE</span><span class="s2">, </span><span class="s0">IMAGE_SIZE</span><span class="s2">))</span>
+<hr class="ls0"><span class="s0">#%% 
+DEVICE </span><span class="s2">= </span><span class="s3">&quot;cuda&quot; </span><span class="s1">if </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">cuda</span><span class="s2">.</span><span class="s0">is_available</span><span class="s2">() </span><span class="s1">else </span><span class="s3">&quot;cpu&quot;</span>
+
+<span class="s0">model</span><span class="s2">.</span><span class="s0">to</span><span class="s2">(</span><span class="s0">DEVICE</span><span class="s2">)</span>
+
+<span class="s0">x </span><span class="s2">= </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">randn</span><span class="s2">(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">3</span><span class="s2">, </span><span class="s5">256</span><span class="s2">, </span><span class="s5">256</span><span class="s2">).</span><span class="s0">to</span><span class="s2">(</span><span class="s0">DEVICE</span><span class="s2">)</span>
+<span class="s0">y </span><span class="s2">= </span><span class="s0">model</span><span class="s2">(</span><span class="s0">x</span><span class="s2">)</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;Output shape:&quot;</span><span class="s2">, </span><span class="s0">y</span><span class="s2">.</span><span class="s0">shape</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># load best model</span>
+<span class="s0">CHECKPOINT_DIR </span><span class="s2">= </span><span class="s3">&quot;checkpoints/semantic_segmentation&quot;</span>
+<span class="s0">BEST_MODEL_PATH </span><span class="s2">= </span><span class="s3">f&quot;</span><span class="s1">{</span><span class="s0">CHECKPOINT_DIR</span><span class="s1">}</span><span class="s3">/best_model.pth&quot;</span>
+
+<span class="s4">#load</span>
+<span class="s0">model_state_dict </span><span class="s2">= </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">load</span><span class="s2">(</span><span class="s0">BEST_MODEL_PATH</span><span class="s2">)[</span><span class="s3">&quot;model_state_dict&quot;</span><span class="s2">]</span>
+<span class="s0">model</span><span class="s2">.</span><span class="s0">load_state_dict</span><span class="s2">(</span><span class="s0">model_state_dict</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s1">import </span><span class="s0">torch</span>
+
+
+<span class="s1">def </span><span class="s0">iou_score</span><span class="s2">(</span><span class="s0">pred</span><span class="s2">, </span><span class="s0">target</span><span class="s2">, </span><span class="s0">eps</span><span class="s2">=</span><span class="s5">1e-7</span><span class="s2">):</span>
+    <span class="s6">&quot;&quot;&quot; 
+    pred, target: (B, 1, H, W), binary {0,1} 
+    &quot;&quot;&quot;</span>
+    <span class="s0">tp </span><span class="s2">= (</span><span class="s0">pred </span><span class="s2">&amp; </span><span class="s0">target</span><span class="s2">).</span><span class="s0">sum</span><span class="s2">(</span><span class="s0">dim</span><span class="s2">=(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">2</span><span class="s2">, </span><span class="s5">3</span><span class="s2">))</span>
+    <span class="s0">fp </span><span class="s2">= (</span><span class="s0">pred </span><span class="s2">&amp; (~</span><span class="s0">target</span><span class="s2">)).</span><span class="s0">sum</span><span class="s2">(</span><span class="s0">dim</span><span class="s2">=(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">2</span><span class="s2">, </span><span class="s5">3</span><span class="s2">))</span>
+    <span class="s0">fn </span><span class="s2">= ((~</span><span class="s0">pred</span><span class="s2">) &amp; </span><span class="s0">target</span><span class="s2">).</span><span class="s0">sum</span><span class="s2">(</span><span class="s0">dim</span><span class="s2">=(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">2</span><span class="s2">, </span><span class="s5">3</span><span class="s2">))</span>
+
+    <span class="s0">iou </span><span class="s2">= </span><span class="s0">tp </span><span class="s2">/ (</span><span class="s0">tp </span><span class="s2">+ </span><span class="s0">fp </span><span class="s2">+ </span><span class="s0">fn </span><span class="s2">+ </span><span class="s0">eps</span><span class="s2">)</span>
+    <span class="s1">return </span><span class="s0">iou</span>
+
+
+<span class="s1">def </span><span class="s0">dice_score</span><span class="s2">(</span><span class="s0">pred</span><span class="s2">, </span><span class="s0">target</span><span class="s2">, </span><span class="s0">eps</span><span class="s2">=</span><span class="s5">1e-7</span><span class="s2">):</span>
+    <span class="s6">&quot;&quot;&quot; 
+    pred, target: (B, 1, H, W), binary {0,1} 
+    &quot;&quot;&quot;</span>
+    <span class="s0">tp </span><span class="s2">= (</span><span class="s0">pred </span><span class="s2">&amp; </span><span class="s0">target</span><span class="s2">).</span><span class="s0">sum</span><span class="s2">(</span><span class="s0">dim</span><span class="s2">=(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">2</span><span class="s2">, </span><span class="s5">3</span><span class="s2">))</span>
+    <span class="s0">fp </span><span class="s2">= (</span><span class="s0">pred </span><span class="s2">&amp; (~</span><span class="s0">target</span><span class="s2">)).</span><span class="s0">sum</span><span class="s2">(</span><span class="s0">dim</span><span class="s2">=(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">2</span><span class="s2">, </span><span class="s5">3</span><span class="s2">))</span>
+    <span class="s0">fn </span><span class="s2">= ((~</span><span class="s0">pred</span><span class="s2">) &amp; </span><span class="s0">target</span><span class="s2">).</span><span class="s0">sum</span><span class="s2">(</span><span class="s0">dim</span><span class="s2">=(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">2</span><span class="s2">, </span><span class="s5">3</span><span class="s2">))</span>
+
+    <span class="s0">dice </span><span class="s2">= (</span><span class="s5">2 </span><span class="s2">* </span><span class="s0">tp</span><span class="s2">) / (</span><span class="s5">2 </span><span class="s2">* </span><span class="s0">tp </span><span class="s2">+ </span><span class="s0">fp </span><span class="s2">+ </span><span class="s0">fn </span><span class="s2">+ </span><span class="s0">eps</span><span class="s2">)</span>
+    <span class="s1">return </span><span class="s0">dice</span>
+<hr class="ls0"><span class="s0">#%% 
+</span><span class="s1">from </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">utils</span><span class="s2">.</span><span class="s0">data </span><span class="s1">import </span><span class="s0">DataLoader</span>
+
+<span class="s0">NUM_TEST_IMAGES </span><span class="s2">= </span><span class="s5">1000</span>
+<span class="s0">BATCH_SIZE </span><span class="s2">= </span><span class="s5">16</span>
+
+<span class="s0">dataset_random </span><span class="s2">= </span><span class="s0">TextSegmentationDataset</span><span class="s2">(</span>
+    <span class="s0">image_dir</span><span class="s2">=</span><span class="s0">DATASET_PATH_TEST</span><span class="s2">,</span>
+    <span class="s0">checkpoint_dir</span><span class="s2">=</span><span class="s3">'checkpoints/dataset_random'</span><span class="s2">,</span>
+    <span class="s0">length</span><span class="s2">=</span><span class="s0">NUM_TEST_IMAGES</span><span class="s2">,</span>
+    <span class="s0">mode</span><span class="s2">=</span><span class="s3">'random'</span>
+<span class="s2">)</span>
+
+<span class="s0">test_loader </span><span class="s2">= </span><span class="s0">DataLoader</span><span class="s2">(</span>
+    <span class="s0">dataset_random</span><span class="s2">,</span>
+    <span class="s0">batch_size</span><span class="s2">=</span><span class="s0">BATCH_SIZE</span><span class="s2">,</span>
+    <span class="s0">shuffle</span><span class="s2">=</span><span class="s1">False</span><span class="s2">,</span>
+    <span class="s0">num_workers</span><span class="s2">=</span><span class="s5">0</span>
+<span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s1">from </span><span class="s0">tqdm </span><span class="s1">import </span><span class="s0">tqdm</span>
+
+<span class="s0">model</span><span class="s2">.</span><span class="s0">eval</span><span class="s2">()</span>
+
+<span class="s0">all_ious </span><span class="s2">= []</span>
+<span class="s0">all_dices </span><span class="s2">= []</span>
+
+<span class="s1">with </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">no_grad</span><span class="s2">():</span>
+    <span class="s1">for </span><span class="s0">images</span><span class="s2">, </span><span class="s0">masks </span><span class="s1">in </span><span class="s0">tqdm</span><span class="s2">(</span><span class="s0">test_loader</span><span class="s2">, </span><span class="s0">desc</span><span class="s2">=</span><span class="s3">&quot;Testing&quot;</span><span class="s2">, </span><span class="s0">unit</span><span class="s2">=</span><span class="s3">&quot;batch&quot;</span><span class="s2">):</span>
+        <span class="s0">images </span><span class="s2">= </span><span class="s0">images</span><span class="s2">.</span><span class="s0">to</span><span class="s2">(</span><span class="s0">DEVICE</span><span class="s2">)</span>
+        <span class="s0">masks </span><span class="s2">= </span><span class="s0">masks</span><span class="s2">.</span><span class="s0">to</span><span class="s2">(</span><span class="s0">DEVICE</span><span class="s2">).</span><span class="s0">int</span><span class="s2">()</span>
+
+        <span class="s0">logits </span><span class="s2">= </span><span class="s0">model</span><span class="s2">(</span><span class="s0">images</span><span class="s2">)</span>
+        <span class="s0">probs </span><span class="s2">= </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">sigmoid</span><span class="s2">(</span><span class="s0">logits</span><span class="s2">)</span>
+        <span class="s0">preds </span><span class="s2">= (</span><span class="s0">probs </span><span class="s2">&gt; </span><span class="s5">0.5</span><span class="s2">).</span><span class="s0">int</span><span class="s2">()</span>
+
+        <span class="s0">iou </span><span class="s2">= </span><span class="s0">iou_score</span><span class="s2">(</span><span class="s0">preds</span><span class="s2">, </span><span class="s0">masks</span><span class="s2">)</span>
+        <span class="s0">dice </span><span class="s2">= </span><span class="s0">dice_score</span><span class="s2">(</span><span class="s0">preds</span><span class="s2">, </span><span class="s0">masks</span><span class="s2">)</span>
+
+        <span class="s0">all_ious</span><span class="s2">.</span><span class="s0">extend</span><span class="s2">(</span><span class="s0">iou</span><span class="s2">.</span><span class="s0">cpu</span><span class="s2">().</span><span class="s0">numpy</span><span class="s2">())</span>
+        <span class="s0">all_dices</span><span class="s2">.</span><span class="s0">extend</span><span class="s2">(</span><span class="s0">dice</span><span class="s2">.</span><span class="s0">cpu</span><span class="s2">().</span><span class="s0">numpy</span><span class="s2">())</span>
+
+<span class="s0">iou_mean </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">all_ious</span><span class="s2">)</span>
+<span class="s0">iou_std </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">std</span><span class="s2">(</span><span class="s0">all_ious</span><span class="s2">)</span>
+
+<span class="s0">dice_mean </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">all_dices</span><span class="s2">)</span>
+<span class="s0">dice_std </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">std</span><span class="s2">(</span><span class="s0">all_dices</span><span class="s2">)</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;</span><span class="s1">\n</span><span class="s3">=== TEST RESULTS (1000 RANDOM IMAGES) ===&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;IoU  : mean = </span><span class="s1">{</span><span class="s0">iou_mean</span><span class="s1">:</span><span class="s3">.4f</span><span class="s1">}</span><span class="s3">, std = </span><span class="s1">{</span><span class="s0">iou_std</span><span class="s1">:</span><span class="s3">.4f</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Dice : mean = </span><span class="s1">{</span><span class="s0">dice_mean</span><span class="s1">:</span><span class="s3">.4f</span><span class="s1">}</span><span class="s3">, std = </span><span class="s1">{</span><span class="s0">dice_std</span><span class="s1">:</span><span class="s3">.4f</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+<hr class="ls0"><span class="s0">#%% 
+</span><span class="s1">import </span><span class="s0">random</span>
+
+
+<span class="s1">def </span><span class="s0">visualize_random_examples</span><span class="s2">(</span><span class="s0">model</span><span class="s2">, </span><span class="s0">dataset</span><span class="s2">, </span><span class="s0">num_samples</span><span class="s2">=</span><span class="s5">3</span><span class="s2">):</span>
+    <span class="s0">model</span><span class="s2">.</span><span class="s0">eval</span><span class="s2">()</span>
+    <span class="s0">indices </span><span class="s2">= </span><span class="s0">random</span><span class="s2">.</span><span class="s0">sample</span><span class="s2">(</span><span class="s0">range</span><span class="s2">(</span><span class="s0">len</span><span class="s2">(</span><span class="s0">dataset</span><span class="s2">)), </span><span class="s0">num_samples</span><span class="s2">)</span>
+
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">figure</span><span class="s2">(</span><span class="s0">figsize</span><span class="s2">=(</span><span class="s5">16</span><span class="s2">, </span><span class="s5">4 </span><span class="s2">* </span><span class="s0">num_samples</span><span class="s2">))</span>
+
+    <span class="s1">with </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">no_grad</span><span class="s2">():</span>
+        <span class="s1">for </span><span class="s0">i</span><span class="s2">, </span><span class="s0">idx </span><span class="s1">in </span><span class="s0">enumerate</span><span class="s2">(</span><span class="s0">indices</span><span class="s2">):</span>
+            <span class="s0">image</span><span class="s2">, </span><span class="s0">mask </span><span class="s2">= </span><span class="s0">dataset</span><span class="s2">[</span><span class="s0">idx</span><span class="s2">]</span>
+
+            <span class="s0">image_t </span><span class="s2">= </span><span class="s0">image</span><span class="s2">.</span><span class="s0">unsqueeze</span><span class="s2">(</span><span class="s5">0</span><span class="s2">).</span><span class="s0">to</span><span class="s2">(</span><span class="s0">DEVICE</span><span class="s2">)</span>
+            <span class="s0">logits </span><span class="s2">= </span><span class="s0">model</span><span class="s2">(</span><span class="s0">image_t</span><span class="s2">)</span>
+            <span class="s0">pred </span><span class="s2">= (</span><span class="s0">torch</span><span class="s2">.</span><span class="s0">sigmoid</span><span class="s2">(</span><span class="s0">logits</span><span class="s2">)[</span><span class="s5">0</span><span class="s2">, </span><span class="s5">0</span><span class="s2">] &gt; </span><span class="s5">0.5</span><span class="s2">).</span><span class="s0">cpu</span><span class="s2">()</span>
+
+            <span class="s0">image_np </span><span class="s2">= </span><span class="s0">image</span><span class="s2">.</span><span class="s0">permute</span><span class="s2">(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">2</span><span class="s2">, </span><span class="s5">0</span><span class="s2">).</span><span class="s0">cpu</span><span class="s2">().</span><span class="s0">numpy</span><span class="s2">()</span>
+            <span class="s0">mask_np </span><span class="s2">= </span><span class="s0">mask</span><span class="s2">[</span><span class="s5">0</span><span class="s2">].</span><span class="s0">cpu</span><span class="s2">().</span><span class="s0">numpy</span><span class="s2">()</span>
+            <span class="s0">pred_np </span><span class="s2">= </span><span class="s0">pred</span><span class="s2">.</span><span class="s0">numpy</span><span class="s2">()</span>
+
+            <span class="s4"># Calculate difference (errors)</span>
+            <span class="s0">diff </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">abs</span><span class="s2">(</span><span class="s0">mask_np</span><span class="s2">.</span><span class="s0">astype</span><span class="s2">(</span><span class="s0">float</span><span class="s2">) - </span><span class="s0">pred_np</span><span class="s2">.</span><span class="s0">astype</span><span class="s2">(</span><span class="s0">float</span><span class="s2">))</span>
+
+            <span class="s4"># Input image</span>
+            <span class="s0">plt</span><span class="s2">.</span><span class="s0">subplot</span><span class="s2">(</span><span class="s0">num_samples</span><span class="s2">, </span><span class="s5">4</span><span class="s2">, </span><span class="s0">i </span><span class="s2">* </span><span class="s5">4 </span><span class="s2">+ </span><span class="s5">1</span><span class="s2">)</span>
+            <span class="s0">plt</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">image_np</span><span class="s2">)</span>
+            <span class="s0">plt</span><span class="s2">.</span><span class="s0">title</span><span class="s2">(</span><span class="s3">&quot;Input image&quot;</span><span class="s2">)</span>
+            <span class="s0">plt</span><span class="s2">.</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">&quot;off&quot;</span><span class="s2">)</span>
+
+            <span class="s4"># Ground truth</span>
+            <span class="s0">plt</span><span class="s2">.</span><span class="s0">subplot</span><span class="s2">(</span><span class="s0">num_samples</span><span class="s2">, </span><span class="s5">4</span><span class="s2">, </span><span class="s0">i </span><span class="s2">* </span><span class="s5">4 </span><span class="s2">+ </span><span class="s5">2</span><span class="s2">)</span>
+            <span class="s0">plt</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">mask_np</span><span class="s2">, </span><span class="s0">cmap</span><span class="s2">=</span><span class="s3">&quot;gray&quot;</span><span class="s2">)</span>
+            <span class="s0">plt</span><span class="s2">.</span><span class="s0">title</span><span class="s2">(</span><span class="s3">&quot;Ground truth mask&quot;</span><span class="s2">)</span>
+            <span class="s0">plt</span><span class="s2">.</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">&quot;off&quot;</span><span class="s2">)</span>
+
+            <span class="s4"># Prediction</span>
+            <span class="s0">plt</span><span class="s2">.</span><span class="s0">subplot</span><span class="s2">(</span><span class="s0">num_samples</span><span class="s2">, </span><span class="s5">4</span><span class="s2">, </span><span class="s0">i </span><span class="s2">* </span><span class="s5">4 </span><span class="s2">+ </span><span class="s5">3</span><span class="s2">)</span>
+            <span class="s0">plt</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">pred_np</span><span class="s2">, </span><span class="s0">cmap</span><span class="s2">=</span><span class="s3">&quot;gray&quot;</span><span class="s2">)</span>
+            <span class="s0">plt</span><span class="s2">.</span><span class="s0">title</span><span class="s2">(</span><span class="s3">&quot;Predicted mask&quot;</span><span class="s2">)</span>
+            <span class="s0">plt</span><span class="s2">.</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">&quot;off&quot;</span><span class="s2">)</span>
+
+            <span class="s4"># Difference</span>
+            <span class="s0">plt</span><span class="s2">.</span><span class="s0">subplot</span><span class="s2">(</span><span class="s0">num_samples</span><span class="s2">, </span><span class="s5">4</span><span class="s2">, </span><span class="s0">i </span><span class="s2">* </span><span class="s5">4 </span><span class="s2">+ </span><span class="s5">4</span><span class="s2">)</span>
+            <span class="s0">plt</span><span class="s2">.</span><span class="s0">imshow</span><span class="s2">(</span><span class="s0">diff</span><span class="s2">, </span><span class="s0">cmap</span><span class="s2">=</span><span class="s3">&quot;Reds&quot;</span><span class="s2">)</span>
+            <span class="s0">plt</span><span class="s2">.</span><span class="s0">title</span><span class="s2">(</span><span class="s3">&quot;Difference (errors)&quot;</span><span class="s2">)</span>
+            <span class="s0">plt</span><span class="s2">.</span><span class="s0">axis</span><span class="s2">(</span><span class="s3">&quot;off&quot;</span><span class="s2">)</span>
+
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span>
+
+
+<span class="s0">visualize_random_examples</span><span class="s2">(</span><span class="s0">model</span><span class="s2">, </span><span class="s0">dataset_random</span><span class="s2">, </span><span class="s0">num_samples</span><span class="s2">=</span><span class="s5">3</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span></pre>
+</body>
+</html>

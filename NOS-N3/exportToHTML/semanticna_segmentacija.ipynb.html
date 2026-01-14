@@ -1,0 +1,235 @@
+<html>
+<head>
+<title>semanticna_segmentacija.ipynb</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #bcbec4;}
+.s1 { color: #cf8e6d;}
+.s2 { color: #bcbec4;}
+.s3 { color: #7a7e85;}
+.s4 { color: #2aacb8;}
+.s5 { color: #6aab73;}
+.s6 { color: #5f826b; font-style: italic;}
+.ls0 { height: 1px; border-width: 0; color: #43454a; background-color:#43454a}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+semanticna_segmentacija.ipynb</font>
+</center></td></tr></table>
+<pre><span class="s0">#%% 
+</span><span class="s1">import </span><span class="s0">time</span>
+<span class="s1">import </span><span class="s0">matplotlib</span><span class="s2">.</span><span class="s0">pyplot </span><span class="s1">as </span><span class="s0">plt</span>
+
+<span class="s1">import </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">optim </span><span class="s1">as </span><span class="s0">optim</span>
+<span class="s1">from </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">utils</span><span class="s2">.</span><span class="s0">data </span><span class="s1">import </span><span class="s0">DataLoader</span>
+
+<span class="s1">from </span><span class="s0">Helper </span><span class="s1">import </span><span class="s2">*</span>
+<span class="s1">from </span><span class="s0">Model </span><span class="s1">import </span><span class="s2">*</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s3"># Configuration</span>
+<span class="s0">IMAGE_SIZE </span><span class="s2">= </span><span class="s4">256</span>
+<span class="s0">BATCH_SIZE </span><span class="s2">= </span><span class="s4">32</span>
+<span class="s0">EPOCHS </span><span class="s2">= </span><span class="s4">10_000</span>
+<span class="s0">TRAIN_SAMPLES_PER_EPOCH </span><span class="s2">= </span><span class="s4">1024</span>
+<span class="s0">VAL_SAMPLES_PER_EPOCH </span><span class="s2">= </span><span class="s4">256</span>
+<span class="s0">LR </span><span class="s2">= </span><span class="s4">1e-4</span>
+
+<span class="s0">CHECKPOINT_INTERVAL </span><span class="s2">= </span><span class="s4">100</span>
+<span class="s0">LOG_INTERVAL </span><span class="s2">= </span><span class="s4">1</span>
+<span class="s0">VAL_INTERVAL </span><span class="s2">= </span><span class="s4">1</span>
+
+<span class="s0">DATASET_PATH_TRAIN </span><span class="s2">= </span><span class="s5">&quot;datasets/DIV2K/DIV2K_train_HR&quot;</span>
+<span class="s0">DATASET_PATH_TEST </span><span class="s2">= </span><span class="s5">&quot;datasets/DIV2K/DIV2K_valid_HR&quot;</span>
+<span class="s0">CHECKPOINT_DIR </span><span class="s2">= </span><span class="s5">&quot;checkpoints/semantic_segmentation&quot;</span>
+
+<span class="s3"># DATASET_CHECKPOINT_TRAIN = CHECKPOINT_DIR + &quot;/train_dataset_checkpoints&quot;</span>
+<span class="s3"># DATASET_CHECKPOINT_VAL = CHECKPOINT_DIR + &quot;/val_dataset_checkpoints&quot;</span>
+
+<span class="s0">device </span><span class="s2">= </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">device</span><span class="s2">(</span><span class="s5">&quot;cuda&quot; </span><span class="s1">if </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">cuda</span><span class="s2">.</span><span class="s0">is_available</span><span class="s2">() </span><span class="s1">else </span><span class="s5">&quot;cpu&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;Using device: </span><span class="s1">{</span><span class="s0">device</span><span class="s1">}</span><span class="s5">&quot;</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+dataset_train </span><span class="s2">= </span><span class="s0">TextSegmentationDataset</span><span class="s2">(</span>
+    <span class="s0">image_dir</span><span class="s2">=</span><span class="s0">DATASET_PATH_TRAIN</span><span class="s2">,</span>
+    <span class="s0">checkpoint_dir</span><span class="s2">=</span><span class="s0">CHECKPOINT_DIR</span><span class="s2">,</span>
+    <span class="s0">length</span><span class="s2">=</span><span class="s0">TRAIN_SAMPLES_PER_EPOCH</span><span class="s2">,</span>
+    <span class="s0">mode</span><span class="s2">=</span><span class="s5">'random'</span>
+<span class="s2">)</span>
+
+<span class="s0">dataset_val </span><span class="s2">= </span><span class="s0">TextSegmentationDataset</span><span class="s2">(</span>
+    <span class="s0">image_dir</span><span class="s2">=</span><span class="s0">DATASET_PATH_TRAIN</span><span class="s2">,</span>
+    <span class="s0">checkpoint_dir</span><span class="s2">=</span><span class="s0">CHECKPOINT_DIR</span><span class="s2">,</span>
+    <span class="s0">length</span><span class="s2">=</span><span class="s0">VAL_SAMPLES_PER_EPOCH</span><span class="s2">,</span>
+    <span class="s0">mode</span><span class="s2">=</span><span class="s5">'pregenerated'</span>
+<span class="s2">)</span>
+
+<span class="s0">train_loader </span><span class="s2">= </span><span class="s0">DataLoader</span><span class="s2">(</span>
+    <span class="s0">dataset_train</span><span class="s2">,</span>
+    <span class="s0">batch_size</span><span class="s2">=</span><span class="s0">BATCH_SIZE</span><span class="s2">,</span>
+    <span class="s0">shuffle</span><span class="s2">=</span><span class="s1">True</span><span class="s2">,</span>
+    <span class="s0">num_workers</span><span class="s2">=</span><span class="s4">0</span><span class="s2">,</span>
+    <span class="s0">drop_last</span><span class="s2">=</span><span class="s1">True</span>
+<span class="s2">)</span>
+
+<span class="s0">val_loader </span><span class="s2">= </span><span class="s0">DataLoader</span><span class="s2">(</span>
+    <span class="s0">dataset_val</span><span class="s2">,</span>
+    <span class="s0">batch_size</span><span class="s2">=</span><span class="s0">BATCH_SIZE</span><span class="s2">,</span>
+    <span class="s0">shuffle</span><span class="s2">=</span><span class="s1">False</span><span class="s2">,</span>
+    <span class="s0">num_workers</span><span class="s2">=</span><span class="s4">0</span><span class="s2">,</span>
+    <span class="s0">drop_last</span><span class="s2">=</span><span class="s1">True</span>
+<span class="s2">)</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;Train batches/epoch: </span><span class="s1">{</span><span class="s0">TRAIN_SAMPLES_PER_EPOCH </span><span class="s2">// </span><span class="s0">BATCH_SIZE</span><span class="s1">}</span><span class="s5">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;Val batches/epoch:   </span><span class="s1">{</span><span class="s0">VAL_SAMPLES_PER_EPOCH </span><span class="s2">// </span><span class="s0">BATCH_SIZE</span><span class="s1">}</span><span class="s5">&quot;</span><span class="s2">)</span>
+
+<span class="s0">model </span><span class="s2">= </span><span class="s0">UNetTextSegmentation</span><span class="s2">().</span><span class="s0">to</span><span class="s2">(</span><span class="s0">device</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;Model parameters: </span><span class="s1">{</span><span class="s0">sum</span><span class="s2">(</span><span class="s0">p</span><span class="s2">.</span><span class="s0">numel</span><span class="s2">() </span><span class="s1">for </span><span class="s0">p </span><span class="s1">in </span><span class="s0">model</span><span class="s2">.</span><span class="s0">parameters</span><span class="s2">())</span><span class="s1">:</span><span class="s5">,</span><span class="s1">}</span><span class="s5">&quot;</span><span class="s2">)</span>
+
+<span class="s0">criterion </span><span class="s2">= </span><span class="s0">nn</span><span class="s2">.</span><span class="s0">BCEWithLogitsLoss</span><span class="s2">()</span>
+<span class="s0">optimizer </span><span class="s2">= </span><span class="s0">optim</span><span class="s2">.</span><span class="s0">Adam</span><span class="s2">(</span><span class="s0">model</span><span class="s2">.</span><span class="s0">parameters</span><span class="s2">(), </span><span class="s0">lr</span><span class="s2">=</span><span class="s0">LR</span><span class="s2">)</span>
+
+<span class="s0">checkpoint </span><span class="s2">= </span><span class="s0">load_checkpoint_generic</span><span class="s2">(</span><span class="s0">CHECKPOINT_DIR</span><span class="s2">, </span><span class="s0">device</span><span class="s2">)</span>
+
+<span class="s0">start_epoch </span><span class="s2">= </span><span class="s4">1</span>
+<span class="s0">train_losses </span><span class="s2">= []</span>
+<span class="s0">val_losses </span><span class="s2">= []</span>
+
+<span class="s0">best_val_loss </span><span class="s2">= </span><span class="s0">float</span><span class="s2">(</span><span class="s5">&quot;inf&quot;</span><span class="s2">)</span>
+
+<span class="s1">if </span><span class="s0">checkpoint</span><span class="s2">:</span>
+    <span class="s0">model</span><span class="s2">.</span><span class="s0">load_state_dict</span><span class="s2">(</span><span class="s0">checkpoint</span><span class="s2">[</span><span class="s5">&quot;model_state_dict&quot;</span><span class="s2">])</span>
+    <span class="s0">optimizer</span><span class="s2">.</span><span class="s0">load_state_dict</span><span class="s2">(</span><span class="s0">checkpoint</span><span class="s2">[</span><span class="s5">&quot;optimizer_state_dict&quot;</span><span class="s2">])</span>
+    <span class="s0">start_epoch </span><span class="s2">= </span><span class="s0">checkpoint</span><span class="s2">.</span><span class="s0">get</span><span class="s2">(</span><span class="s5">&quot;epoch&quot;</span><span class="s2">, </span><span class="s4">0</span><span class="s2">) + </span><span class="s4">1</span>
+    <span class="s0">train_losses </span><span class="s2">= </span><span class="s0">checkpoint</span><span class="s2">.</span><span class="s0">get</span><span class="s2">(</span><span class="s5">&quot;train_losses&quot;</span><span class="s2">, [])</span>
+    <span class="s0">val_losses </span><span class="s2">= </span><span class="s0">checkpoint</span><span class="s2">.</span><span class="s0">get</span><span class="s2">(</span><span class="s5">&quot;val_losses&quot;</span><span class="s2">, [])</span>
+    <span class="s0">best_val_loss </span><span class="s2">= </span><span class="s0">checkpoint</span><span class="s2">.</span><span class="s0">get</span><span class="s2">(</span><span class="s5">&quot;best_val_loss&quot;</span><span class="s2">, </span><span class="s0">best_val_loss</span><span class="s2">)</span>
+
+    <span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;Resuming from epoch </span><span class="s1">{</span><span class="s0">start_epoch</span><span class="s1">}</span><span class="s5">&quot;</span><span class="s2">)</span>
+<span class="s1">else</span><span class="s2">:</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;No checkpoint found, starting fresh.&quot;</span><span class="s2">)</span>
+<hr class="ls0"><span class="s0">#%% 
+print</span><span class="s2">(</span><span class="s5">f&quot;</span><span class="s1">\n</span><span class="s5">Starting training for </span><span class="s1">{</span><span class="s0">EPOCHS</span><span class="s1">} </span><span class="s5">epochs...</span><span class="s1">\n</span><span class="s5">&quot;</span><span class="s2">)</span>
+
+<span class="s1">for </span><span class="s0">epoch </span><span class="s1">in </span><span class="s0">range</span><span class="s2">(</span><span class="s0">start_epoch</span><span class="s2">, </span><span class="s0">EPOCHS </span><span class="s2">+ </span><span class="s4">1</span><span class="s2">):</span>
+    <span class="s3"># TRAIN</span>
+    <span class="s0">model</span><span class="s2">.</span><span class="s0">train</span><span class="s2">()</span>
+    <span class="s0">epoch_train_loss </span><span class="s2">= </span><span class="s4">0.0</span>
+    <span class="s0">batches_seen </span><span class="s2">= </span><span class="s4">0</span>
+    <span class="s0">train_start </span><span class="s2">= </span><span class="s0">time</span><span class="s2">.</span><span class="s0">time</span><span class="s2">()</span>
+
+    <span class="s1">for </span><span class="s0">images</span><span class="s2">, </span><span class="s0">masks </span><span class="s1">in </span><span class="s0">train_loader</span><span class="s2">:</span>
+        <span class="s0">images </span><span class="s2">= </span><span class="s0">images</span><span class="s2">.</span><span class="s0">to</span><span class="s2">(</span><span class="s0">device</span><span class="s2">)</span>
+        <span class="s0">masks </span><span class="s2">= </span><span class="s0">masks</span><span class="s2">.</span><span class="s0">to</span><span class="s2">(</span><span class="s0">device</span><span class="s2">)</span>
+
+        <span class="s0">optimizer</span><span class="s2">.</span><span class="s0">zero_grad</span><span class="s2">()</span>
+        <span class="s0">logits </span><span class="s2">= </span><span class="s0">model</span><span class="s2">(</span><span class="s0">images</span><span class="s2">)</span>
+        <span class="s0">loss </span><span class="s2">= </span><span class="s0">criterion</span><span class="s2">(</span><span class="s0">logits</span><span class="s2">, </span><span class="s0">masks</span><span class="s2">)</span>
+
+        <span class="s0">loss</span><span class="s2">.</span><span class="s0">backward</span><span class="s2">()</span>
+        <span class="s0">optimizer</span><span class="s2">.</span><span class="s0">step</span><span class="s2">()</span>
+
+        <span class="s0">epoch_train_loss </span><span class="s2">+= </span><span class="s0">loss</span><span class="s2">.</span><span class="s0">item</span><span class="s2">()</span>
+        <span class="s0">batches_seen </span><span class="s2">+= </span><span class="s4">1</span>
+
+    <span class="s0">epoch_train_loss </span><span class="s2">/= </span><span class="s0">batches_seen</span>
+    <span class="s0">train_losses</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">epoch_train_loss</span><span class="s2">)</span>
+    <span class="s0">train_time </span><span class="s2">= </span><span class="s0">time</span><span class="s2">.</span><span class="s0">time</span><span class="s2">() - </span><span class="s0">train_start</span>
+
+    <span class="s3"># VALIDATION</span>
+    <span class="s0">epoch_val_loss </span><span class="s2">= </span><span class="s1">None</span>
+    <span class="s0">val_time </span><span class="s2">= </span><span class="s1">None</span>
+
+    <span class="s1">if </span><span class="s0">epoch </span><span class="s2">% </span><span class="s0">VAL_INTERVAL </span><span class="s2">== </span><span class="s4">0</span><span class="s2">:</span>
+        <span class="s0">model</span><span class="s2">.</span><span class="s0">eval</span><span class="s2">()</span>
+        <span class="s0">epoch_val_loss </span><span class="s2">= </span><span class="s4">0.0</span>
+        <span class="s0">val_batches </span><span class="s2">= </span><span class="s4">0</span>
+        <span class="s0">val_start </span><span class="s2">= </span><span class="s0">time</span><span class="s2">.</span><span class="s0">time</span><span class="s2">()</span>
+
+        <span class="s1">with </span><span class="s0">torch</span><span class="s2">.</span><span class="s0">no_grad</span><span class="s2">():</span>
+            <span class="s1">for </span><span class="s0">images</span><span class="s2">, </span><span class="s0">masks </span><span class="s1">in </span><span class="s0">val_loader</span><span class="s2">:</span>
+                <span class="s0">images </span><span class="s2">= </span><span class="s0">images</span><span class="s2">.</span><span class="s0">to</span><span class="s2">(</span><span class="s0">device</span><span class="s2">)</span>
+                <span class="s0">masks </span><span class="s2">= </span><span class="s0">masks</span><span class="s2">.</span><span class="s0">to</span><span class="s2">(</span><span class="s0">device</span><span class="s2">)</span>
+
+                <span class="s0">logits </span><span class="s2">= </span><span class="s0">model</span><span class="s2">(</span><span class="s0">images</span><span class="s2">)</span>
+                <span class="s0">loss </span><span class="s2">= </span><span class="s0">criterion</span><span class="s2">(</span><span class="s0">logits</span><span class="s2">, </span><span class="s0">masks</span><span class="s2">)</span>
+
+                <span class="s0">epoch_val_loss </span><span class="s2">+= </span><span class="s0">loss</span><span class="s2">.</span><span class="s0">item</span><span class="s2">()</span>
+                <span class="s0">val_batches </span><span class="s2">+= </span><span class="s4">1</span>
+
+        <span class="s0">epoch_val_loss </span><span class="s2">/= </span><span class="s0">val_batches</span>
+        <span class="s0">val_losses</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">epoch_val_loss</span><span class="s2">)</span>
+        <span class="s0">val_time </span><span class="s2">= </span><span class="s0">time</span><span class="s2">.</span><span class="s0">time</span><span class="s2">() - </span><span class="s0">val_start</span>
+
+    <span class="s3"># LOGGING</span>
+    <span class="s1">if </span><span class="s0">epoch </span><span class="s2">% </span><span class="s0">LOG_INTERVAL </span><span class="s2">== </span><span class="s4">0</span><span class="s2">:</span>
+        <span class="s0">log_str </span><span class="s2">= </span><span class="s5">f&quot;Epoch [</span><span class="s1">{</span><span class="s0">epoch</span><span class="s1">:</span><span class="s5">4d</span><span class="s1">}</span><span class="s5">/</span><span class="s1">{</span><span class="s0">EPOCHS</span><span class="s1">}</span><span class="s5">] | Train Loss: </span><span class="s1">{</span><span class="s0">epoch_train_loss</span><span class="s1">:</span><span class="s5">.5f</span><span class="s1">} </span><span class="s5">| Train Time: </span><span class="s1">{</span><span class="s0">train_time</span><span class="s1">:</span><span class="s5">.1f</span><span class="s1">}</span><span class="s5">s&quot;</span>
+
+        <span class="s1">if </span><span class="s0">epoch_val_loss </span><span class="s1">is not None</span><span class="s2">:</span>
+            <span class="s0">log_str </span><span class="s2">+= </span><span class="s5">f&quot; | Val Loss: </span><span class="s1">{</span><span class="s0">epoch_val_loss</span><span class="s1">:</span><span class="s5">.5f</span><span class="s1">} </span><span class="s5">| Val Time: </span><span class="s1">{</span><span class="s0">val_time</span><span class="s1">:</span><span class="s5">.1f</span><span class="s1">}</span><span class="s5">s&quot;</span>
+
+        <span class="s0">print</span><span class="s2">(</span><span class="s0">log_str</span><span class="s2">)</span>
+
+    <span class="s3"># BEST MODEL (only save when validation happened)</span>
+    <span class="s1">if </span><span class="s0">epoch_val_loss </span><span class="s1">is not None and </span><span class="s0">epoch_val_loss </span><span class="s2">&lt; </span><span class="s0">best_val_loss</span><span class="s2">:</span>
+        <span class="s0">best_val_loss </span><span class="s2">= </span><span class="s0">epoch_val_loss</span>
+        <span class="s0">torch</span><span class="s2">.</span><span class="s0">save</span><span class="s2">(</span>
+            <span class="s2">{</span>
+                <span class="s5">&quot;epoch&quot;</span><span class="s2">: </span><span class="s0">epoch</span><span class="s2">,</span>
+                <span class="s5">&quot;model_state_dict&quot;</span><span class="s2">: </span><span class="s0">model</span><span class="s2">.</span><span class="s0">state_dict</span><span class="s2">(),</span>
+                <span class="s5">&quot;optimizer_state_dict&quot;</span><span class="s2">: </span><span class="s0">optimizer</span><span class="s2">.</span><span class="s0">state_dict</span><span class="s2">(),</span>
+                <span class="s5">&quot;best_val_loss&quot;</span><span class="s2">: </span><span class="s0">best_val_loss</span><span class="s2">,</span>
+            <span class="s2">},</span>
+            <span class="s0">CHECKPOINT_DIR </span><span class="s2">/ </span><span class="s5">&quot;best_model.pth&quot;</span><span class="s2">,</span>
+        <span class="s2">)</span>
+        <span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;✓ Saved best model (Val Loss: </span><span class="s1">{</span><span class="s0">best_val_loss</span><span class="s1">:</span><span class="s5">.5f</span><span class="s1">}</span><span class="s5">)&quot;</span><span class="s2">)</span>
+
+    <span class="s3"># REGULAR CHECKPOINT</span>
+    <span class="s1">if </span><span class="s0">epoch </span><span class="s2">% </span><span class="s0">CHECKPOINT_INTERVAL </span><span class="s2">== </span><span class="s4">0</span><span class="s2">:</span>
+        <span class="s0">save_checkpoint_generic</span><span class="s2">(</span>
+            <span class="s0">CHECKPOINT_DIR</span><span class="s2">,</span>
+            <span class="s0">epoch</span><span class="s2">,</span>
+            <span class="s2">{</span>
+                <span class="s5">&quot;epoch&quot;</span><span class="s2">: </span><span class="s0">epoch</span><span class="s2">,</span>
+                <span class="s5">&quot;model_state_dict&quot;</span><span class="s2">: </span><span class="s0">model</span><span class="s2">.</span><span class="s0">state_dict</span><span class="s2">(),</span>
+                <span class="s5">&quot;optimizer_state_dict&quot;</span><span class="s2">: </span><span class="s0">optimizer</span><span class="s2">.</span><span class="s0">state_dict</span><span class="s2">(),</span>
+                <span class="s5">&quot;train_losses&quot;</span><span class="s2">: </span><span class="s0">train_losses</span><span class="s2">,</span>
+                <span class="s5">&quot;val_losses&quot;</span><span class="s2">: </span><span class="s0">val_losses</span><span class="s2">,</span>
+                <span class="s5">&quot;best_val_loss&quot;</span><span class="s2">: </span><span class="s0">best_val_loss</span><span class="s2">,</span>
+            <span class="s2">},</span>
+            <span class="s0">max_checkpoints</span><span class="s2">=</span><span class="s4">5</span><span class="s2">,</span>
+        <span class="s2">)</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s5">&quot;</span><span class="s1">\n</span><span class="s5">🎉 Training completed!&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;📊 Final statistics:&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;  - Best validation loss: </span><span class="s1">{</span><span class="s0">best_val_loss</span><span class="s1">:</span><span class="s5">.6f</span><span class="s1">}</span><span class="s5">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;  - Total validation points: </span><span class="s1">{</span><span class="s0">len</span><span class="s2">(</span><span class="s0">val_losses</span><span class="s2">)</span><span class="s1">}</span><span class="s5">&quot;</span><span class="s2">)</span>
+<span class="s0">print</span><span class="s2">(</span><span class="s5">f&quot;  - Total training loss logs: </span><span class="s1">{</span><span class="s0">len</span><span class="s2">(</span><span class="s0">train_losses</span><span class="s2">)</span><span class="s1">}</span><span class="s5">&quot;</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s1">def </span><span class="s0">plot_losses</span><span class="s2">(</span><span class="s0">train_losses</span><span class="s2">, </span><span class="s0">val_losses</span><span class="s2">, </span><span class="s0">val_interval</span><span class="s2">):</span>
+    <span class="s6">&quot;&quot;&quot; 
+    Plot training and validation losses. 
+ 
+    Args: 
+        train_losses: List of training loss values (one per epoch) 
+        val_losses: List of validation loss values (one per val_interval epochs) 
+        val_interval: How often validation occurs (e.g., every 1, 5, 10 epochs) 
+    &quot;&quot;&quot;</span>
+    <span class="s3"># Create epoch arrays</span>
+    <span class="s0">train_epochs </span><span class="s2">= </span><span class="s0">list</span><span class="s2">(</span><span class="s0">range</span><span class="s2">(</span><span class="s4">1</span><span class="s2">, </span><span class="s0">len</span><span class="s2">(</span><span class="s0">train_losses</span><span class="s2">) + </span><span class="s4">1</span><span class="s2">))</span>
+    <span class="s0">val_epochs </span><span class="s2">= </span><span class="s0">list</span><span class="s2">(</span><span class="s0">range</span><span class="s2">(</span><span class="s0">val_interval</span><span class="s2">, </span><span class="s0">len</span><span class="s2">(</span><span class="s0">val_losses</span><span class="s2">) * </span><span class="s0">val_interval </span><span class="s2">+ </span><span class="s4">1</span><span class="s2">, </span><span class="s0">val_interval</span><span class="s2">))</span>
+
+    <span class="s3"># Plot</span>
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">figure</span><span class="s2">(</span><span class="s0">figsize</span><span class="s2">=(</span><span class="s4">10</span><span class="s2">, </span><span class="s4">6</span><span class="s2">))</span>
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">plot</span><span class="s2">(</span><span class="s0">train_epochs</span><span class="s2">, </span><span class="s0">train_losses</span><span class="s2">, </span><span class="s0">label</span><span class="s2">=</span><span class="s5">'Train Loss'</span><span class="s2">, </span><span class="s0">linewidth</span><span class="s2">=</span><span class="s4">2</span><span class="s2">)</span>
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">plot</span><span class="s2">(</span><span class="s0">val_epochs</span><span class="s2">, </span><span class="s0">val_losses</span><span class="s2">, </span><span class="s0">label</span><span class="s2">=</span><span class="s5">'Val Loss'</span><span class="s2">, </span><span class="s0">linewidth</span><span class="s2">=</span><span class="s4">2</span><span class="s2">, </span><span class="s0">marker</span><span class="s2">=</span><span class="s5">'o'</span><span class="s2">, </span><span class="s0">markersize</span><span class="s2">=</span><span class="s4">4</span><span class="s2">)</span>
+
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">xlabel</span><span class="s2">(</span><span class="s5">'Epoch'</span><span class="s2">)</span>
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">ylabel</span><span class="s2">(</span><span class="s5">'Loss'</span><span class="s2">)</span>
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">title</span><span class="s2">(</span><span class="s5">'Training and Validation Loss'</span><span class="s2">)</span>
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">legend</span><span class="s2">()</span>
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">grid</span><span class="s2">(</span><span class="s1">True</span><span class="s2">, </span><span class="s0">alpha</span><span class="s2">=</span><span class="s4">0.3</span><span class="s2">)</span>
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span><hr class="ls0"><span class="s0">#%% 
+plot_losses</span><span class="s2">(</span><span class="s0">train_losses</span><span class="s2">, </span><span class="s0">val_losses</span><span class="s2">, </span><span class="s0">VAL_INTERVAL</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span></pre>
+</body>
+</html>
