@@ -1,0 +1,40 @@
+
+
+thickness 8
+256x256
+vseeno ce je blury, glej kak zapolni masko
+namesto maxpool naredis stride za downscale. 
+za upscale namesto convtranspase? das interpolacijo nearest neighbour
+partial convolution- klasicna conv, preden izracunas, ta del na maskah das na 0. (da se ti ne razsirja crna maska)
+- vseen dobimo bias in nato resimo z normalizacijo. (na delu kjer je samo maska ne delamo konvolucije.)
+
+class partial
+	conv(in out 3 stride 1) (stride 1 ali 2 odvisno ce upscale downscale)
+	register_buffer(conv_all_ones, torch_ones...) # ustvari operator conv s samimi enicami
+	
+	
+	forward
+	x=x * mask
+	conv
+	
+	nograd
+		sum = conv2d(mask, conv_all_ones, stride, 1) # new mask
+		new = sum > 0	# condition
+	
+	normalizacija (pazi / 0 )
+
+ena conv na sliko, 
+ena conv za masko samo (zmanjsa masko)
+
+vse piksle ki so znotraj operatorja > 0 
+dokler je vsa ena 1 v oknu ostalo pa 0 od maske, se bo maska zmanjsala.
+izhod conv maske pol zapolnis 0 nazaj na prvotno sliko
+ko gres dol se maska manjsa, ko gres gor maska vec ni pomembna
+
+maska concat .amax(1, True)
+
+loss razlika kvadratov (L1) MSE
+ne uporabi torch MSE.
+lastna loss funckcija ker torch ne uporteva masko
+predicted, image, mask -> je na sistemu za vaje
+
